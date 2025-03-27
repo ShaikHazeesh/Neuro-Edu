@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -6,8 +6,20 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertChatMessageSchema } from "@shared/schema";
 import fetch from "node-fetch";
+import { setupAuth } from "./auth";
+
+// Authentication middleware for protected routes
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Authentication required" });
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+  
   // prefix all routes with /api
   const apiRouter = app;
 
@@ -175,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Forum endpoints
+  // Forum endpoints (GET endpoints open, POST protected)
   apiRouter.get("/api/forum", async (req, res) => {
     try {
       const posts = await storage.getForumPosts();
@@ -249,26 +261,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch forum post details" });
     }
   });
-
-  // AI Chat endpoint
-  apiRouter.post("/api/chat", async (req, res) => {
+  
+  // Create new forum post (protected)
+  apiRouter.post("/api/forum", isAuthenticated, async (req, res) => {
     try {
-      // Validate request body
-      const messageSchema = z.object({
-        message: z.string().min(1, "Message cannot be empty"),
-        userId: z.number().optional()
+      const postSchema = z.object({
+        title: z.string().min(5, "Title must be at least 5 characters"),
+        content: z.string().min(10, "Content must be at least 10 characters"),
+        tags: z.array(z.string()).optional(),
+        anonymous: z.boolean().optional()
       });
       
-      const { message, userId = 1 } = messageSchema.parse(req.body);
+      const postData = postSchema.parse(req.body);
+      const userId = (req.user as Express.User).id;
+      
+      const newPost = await storage.createForumPost({
+        ...postData,
+        userId
+      });
+      
+      // Format the response
+      const formattedPost = newPost.anonymous 
+        ? { ...newPost, username: "Anonymous", userAvatar: null }
+        : { ...newPost, username: `User${newPost.userId}`, userAvatar: `https://i.pravatar.cc/150?u=${newPost.userId}` };
+      
+      res.status(201).json(formattedPost);
+    } catch (error) {
+      console.error("Error creating forum post:", error);
+      if (error instanceof ZodError) {
+        return handleZodError(error, res);
+      }
+      res.status(500).json({ message: "Failed to create forum post" });
+    }
+  });
+  
+  // Add comment to a post (protected)
+  apiRouter.post("/api/forum/:postId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const postId = parseInt(req.params.postId);
+      if (isNaN(postId)) {
+        return res.status(400).json({ message: "Invalid post ID" });
+      }
+      
+      // Verify the post exists
+      const post = await storage.getForumPost(postId);
+      if (!post) {
+        return res.status(404).json({ message: "Forum post not found" });
+      }
+      
+      const commentSchema = z.object({
+        content: z.string().min(1, "Comment cannot be empty"),
+        anonymous: z.boolean().optional()
+      });
+      
+      const commentData = commentSchema.parse(req.body);
+      const userId = (req.user as Express.User).id;
+      
+      const newComment = await storage.createForumComment({
+        ...commentData,
+        userId,
+        postId
+      });
+      
+      // Format the response
+      const formattedComment = newComment.anonymous 
+        ? { ...newComment, username: "Anonymous", userAvatar: null }
+        : { ...newComment, username: `User${newComment.userId}`, userAvatar: `https://i.pravatar.cc/150?u=${newComment.userId}` };
+      
+      res.status(201).json(formattedComment);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      if (error instanceof ZodError) {
+        return handleZodError(error, res);
+      }
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // AI Chat endpoint (updated for message history)
+  apiRouter.post("/api/ai/chat", isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body with message history
+      const chatRequestSchema = z.object({
+        message: z.string().min(1, "Message cannot be empty"),
+        history: z.array(
+          z.object({
+            role: z.enum(['user', 'assistant']),
+            content: z.string()
+          })
+        ).optional()
+      });
+      
+      const { message, history = [] } = chatRequestSchema.parse(req.body);
+      const userId = (req.user as Express.User).id;
 
       let response;
       
       // Check if Qroq API key is available
-      const apiKey = process.env.QROQ_API_KEY || process.env.API_KEY;
+      const apiKey = process.env.QROQ_API_KEY;
       
       if (apiKey) {
-        // Make call to Qroq API
         try {
+          // Prepare the messages array with history and current message
+          const messages = [
+            ...history,
+            { role: 'user', content: message }
+          ];
+          
+          // Call to Qroq API
           const qroqResponse = await fetch('https://api.qroq.com/v1/chat', {
             method: 'POST',
             headers: {
@@ -276,7 +376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-              messages: [{ role: 'user', content: message }]
+              messages,
+              temperature: 0.7,
+              max_tokens: 1000
             })
           });
           
@@ -284,8 +386,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error(`Qroq API responded with status: ${qroqResponse.status}`);
           }
           
-          const data = await qroqResponse.json();
-          response = data.choices[0].message.content;
+          const data = await qroqResponse.json() as {
+            choices: Array<{
+              message: {
+                content: string;
+              };
+            }>;
+          };
+          
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            response = data.choices[0].message.content;
+          } else {
+            throw new Error("Unexpected response format from Qroq API");
+          }
         } catch (error) {
           console.error("Error calling Qroq API:", error);
           response = "I'm having trouble connecting to my knowledge base at the moment. Please try again later.";
@@ -298,6 +411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           response = "JavaScript is a versatile language used for web development. It allows you to create interactive elements on websites. What specific aspect of JavaScript are you interested in learning?";
         } else if (message.toLowerCase().includes("stress") || message.toLowerCase().includes("anxiety") || message.toLowerCase().includes("overwhelm")) {
           response = "It's normal to feel stressed when learning programming. Taking regular breaks, practicing mindfulness, and breaking tasks into smaller steps can help. Remember to be kind to yourself during this learning journey.";
+        } else if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
+          response = "Hello! I'm your AI assistant for both programming education and mental wellness. How can I help you today?";
         } else {
           response = "I'm here to help with your programming questions and provide mental health support. What specific topic would you like to learn about today?";
         }
@@ -307,7 +422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.saveChatMessage({
         userId,
         message,
-        response
+        response,
+        createdAt: new Date()
       });
 
       res.json({ response });
@@ -320,17 +436,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mood tracking endpoints
-  apiRouter.post("/api/mood", async (req, res) => {
+  // Mood tracking endpoints (protected)
+  apiRouter.post("/api/mood", isAuthenticated, async (req, res) => {
     try {
       const moodSchema = z.object({
-        userId: z.number().default(1),
         mood: z.enum(["Good", "Okay", "Struggling"]),
         journal: z.string().optional()
       });
       
       const moodData = moodSchema.parse(req.body);
-      const savedEntry = await storage.saveMoodEntry(moodData);
+      const userId = (req.user as Express.User).id;
+      const savedEntry = await storage.saveMoodEntry({ ...moodData, userId });
       
       res.json(savedEntry);
     } catch (error) {
@@ -342,13 +458,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.get("/api/mood/:userId", async (req, res) => {
+  apiRouter.get("/api/mood", isAuthenticated, async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
-        return res.status(400).json({ message: "Invalid user ID" });
-      }
-
+      const userId = (req.user as Express.User).id;
       const entries = await storage.getUserMoodEntries(userId);
       res.json(entries);
     } catch (error) {

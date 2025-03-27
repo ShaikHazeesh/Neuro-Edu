@@ -1,77 +1,98 @@
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export interface ChatMessage {
   id: string;
   text: string;
   isUser: boolean;
+  timestamp: Date;
 }
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "initial-0",
-    text: "Hi there! I'm your learning and support assistant. How can I help you today?",
-    isUser: false,
-  },
-];
-
 function useAIChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
-  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
-
-    // Create unique ID
-    const userMsgId = `user-${Date.now()}`;
     
-    // Add user message to chat
+    // Generate a unique ID for the new message
+    const userMessageId = `user-${Date.now()}`;
+    
+    // Add user message to the chat
     const userMessage: ChatMessage = {
-      id: userMsgId,
-      text,
+      id: userMessageId,
+      text: text,
       isUser: true,
+      timestamp: new Date(),
     };
     
-    setMessages((prev) => [...prev, userMessage]);
-    setIsTyping(true);
-
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setIsLoading(true);
+    
     try {
-      // Send message to API
-      const response = await apiRequest("POST", "/api/chat", { message: text });
-      const data = await response.json();
-
-      // Add bot response with slight delay to simulate typing
-      setTimeout(() => {
-        const botMessage: ChatMessage = {
-          id: `bot-${Date.now()}`,
-          text: data.response,
-          isUser: false,
-        };
-        
-        setMessages((prev) => [...prev, botMessage]);
-        setIsTyping(false);
-      }, 1000);
-    } catch (error) {
-      console.error("Error sending message:", error);
+      // Call the backend API to get AI response
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: text,
+          history: messages.map(msg => ({
+            role: msg.isUser ? 'user' : 'assistant',
+            content: msg.text
+          }))
+        }),
+      });
       
-      // Add error message
-      setTimeout(() => {
-        const errorMessage: ChatMessage = {
-          id: `error-${Date.now()}`,
-          text: "Sorry, I'm having trouble connecting. Please try again later.",
-          isUser: false,
-        };
-        
-        setMessages((prev) => [...prev, errorMessage]);
-        setIsTyping(false);
-      }, 1000);
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Add AI response to the chat
+      const botMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        text: data.response,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prevMessages => [...prevMessages, botMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Add error message to the chat
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to get a response from the AI assistant.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
+  }, [messages, toast]);
+  
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+  
   return {
     messages,
     sendMessage,
-    isTyping,
+    clearMessages,
+    isLoading,
   };
 }
 

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import MainLayout from "@/components/layouts/MainLayout";
 import MentalHealthTools from "@/components/sections/MentalHealthTools";
+import AIChatSection from "@/components/sections/AIChatSection";
 import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/use-auth";
 
 const breathingSteps = [
   "Breathe in slowly through your nose for 4 seconds",
@@ -62,14 +64,40 @@ const MentalHealth = () => {
           </motion.div>
           
           <Tabs defaultValue="tools" onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 max-w-md mx-auto mb-8">
+            <TabsList className="grid grid-cols-4 max-w-xl mx-auto mb-8">
               <TabsTrigger value="tools">Support Tools</TabsTrigger>
+              <TabsTrigger value="ai-chat">AI Chat</TabsTrigger>
               <TabsTrigger value="breathing">Breathing</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
             </TabsList>
             
             <TabsContent value="tools">
               <MentalHealthTools />
+            </TabsContent>
+            
+            <TabsContent value="ai-chat">
+              <div className="max-w-xl mx-auto mb-6">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-standard shadow-soft mb-6">
+                  <h2 className="text-2xl font-outfit font-semibold mb-4">AI Mental Health Assistant</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    Talk to our AI assistant about anything that's on your mind. Whether you're feeling stressed about your programming studies or need someone to talk to, our AI is here to help.
+                  </p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    <strong>Note:</strong> While our AI can provide general support, it is not a replacement for professional mental health care. If you're experiencing a mental health crisis, please reach out to a professional or use the crisis resources listed in the Resources tab.
+                  </p>
+                </div>
+                
+                <div className="h-[500px]">
+                  <AIChatSection 
+                    className="h-full w-full"
+                    initialPrompt={
+                      activeTab === "ai-chat" ? 
+                      "I'm feeling a bit stressed with my programming studies. Can you give me some advice?" 
+                      : undefined
+                    }
+                  />
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="breathing">

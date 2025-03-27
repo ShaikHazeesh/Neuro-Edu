@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User model
 export const users = pgTable("users", {
@@ -14,12 +15,23 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false),
 });
 
+export const usersRelations = relations(users, ({ many }) => ({
+  progress: many(userProgress),
+  courses: many(courses),
+  forumPosts: many(forumPosts),
+  forumComments: many(forumComments),
+  chatMessages: many(chatMessages),
+  moodEntries: many(moodEntries),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   email: true,
   fullName: true,
   avatarUrl: true,
+  createdAt: true,
+  isAdmin: true,
 });
 
 // Course model
@@ -35,6 +47,12 @@ export const courses = pgTable("courses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const coursesRelations = relations(courses, ({ many }) => ({
+  lessons: many(lessons),
+  modules: many(modules),
+  userProgress: many(userProgress),
+}));
+
 export const insertCourseSchema = createInsertSchema(courses).pick({
   title: true,
   description: true,
@@ -48,7 +66,7 @@ export const insertCourseSchema = createInsertSchema(courses).pick({
 // Lesson model
 export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
-  courseId: integer("course_id").notNull(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   description: text("description").notNull(),
   videoUrl: text("video_url").notNull(),
@@ -58,6 +76,15 @@ export const lessons = pgTable("lessons", {
   order: integer("order").notNull(),
   isFeatured: boolean("is_featured").default(false),
 });
+
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [lessons.courseId],
+    references: [courses.id],
+  }),
+  quizzes: many(quizzes),
+  userProgress: many(userProgress),
+}));
 
 export const insertLessonSchema = createInsertSchema(lessons).pick({
   courseId: true,
@@ -74,10 +101,17 @@ export const insertLessonSchema = createInsertSchema(lessons).pick({
 // Module model for organizing lessons
 export const modules = pgTable("modules", {
   id: serial("id").primaryKey(),
-  courseId: integer("course_id").notNull(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   order: integer("order").notNull(),
 });
+
+export const modulesRelations = relations(modules, ({ one }) => ({
+  course: one(courses, {
+    fields: [modules.courseId],
+    references: [courses.id],
+  }),
+}));
 
 export const insertModuleSchema = createInsertSchema(modules).pick({
   courseId: true,
@@ -88,13 +122,28 @@ export const insertModuleSchema = createInsertSchema(modules).pick({
 // User progress tracking
 export const userProgress = pgTable("user_progress", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  courseId: integer("course_id").notNull(),
-  lessonId: integer("lesson_id"),
+  userId: integer("user_id").notNull().references(() => users.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  lessonId: integer("lesson_id").references(() => lessons.id),
   progress: integer("progress").default(0), // Percentage of completion
   lastAccessed: timestamp("last_accessed").defaultNow(),
   completed: boolean("completed").default(false),
 });
+
+export const userProgressRelations = relations(userProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [userProgress.userId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [userProgress.courseId],
+    references: [courses.id],
+  }),
+  lesson: one(lessons, {
+    fields: [userProgress.lessonId],
+    references: [lessons.id],
+  }),
+}));
 
 export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
   userId: true,
@@ -107,11 +156,18 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
 // Quiz model
 export const quizzes = pgTable("quizzes", {
   id: serial("id").primaryKey(),
-  lessonId: integer("lesson_id").notNull(),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
   title: text("title").notNull(),
   description: text("description"),
   questions: json("questions").notNull(), // JSON array of quiz questions
 });
+
+export const quizzesRelations = relations(quizzes, ({ one }) => ({
+  lesson: one(lessons, {
+    fields: [quizzes.lessonId],
+    references: [lessons.id],
+  }),
+}));
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
   lessonId: true,
@@ -141,7 +197,7 @@ export const insertCheatSheetSchema = createInsertSchema(cheatSheets).pick({
 // Community forum posts
 export const forumPosts = pgTable("forum_posts", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   content: text("content").notNull(),
   tags: text("tags").array(),
@@ -150,6 +206,14 @@ export const forumPosts = pgTable("forum_posts", {
   likes: integer("likes").default(0),
   anonymous: boolean("anonymous").default(false),
 });
+
+export const forumPostsRelations = relations(forumPosts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [forumPosts.userId],
+    references: [users.id],
+  }),
+  comments: many(forumComments),
+}));
 
 export const insertForumPostSchema = createInsertSchema(forumPosts).pick({
   userId: true,
@@ -162,14 +226,25 @@ export const insertForumPostSchema = createInsertSchema(forumPosts).pick({
 // Forum comments
 export const forumComments = pgTable("forum_comments", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").notNull(),
-  userId: integer("user_id").notNull(),
+  postId: integer("post_id").notNull().references(() => forumPosts.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   likes: integer("likes").default(0),
   anonymous: boolean("anonymous").default(false),
 });
+
+export const forumCommentsRelations = relations(forumComments, ({ one }) => ({
+  post: one(forumPosts, {
+    fields: [forumComments.postId],
+    references: [forumPosts.id],
+  }),
+  user: one(users, {
+    fields: [forumComments.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertForumCommentSchema = createInsertSchema(forumComments).pick({
   postId: true,
@@ -181,26 +256,41 @@ export const insertForumCommentSchema = createInsertSchema(forumComments).pick({
 // Chat message history
 export const chatMessages = pgTable("chat_messages", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
   message: text("message").notNull(),
   response: text("response").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [chatMessages.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
   userId: true,
   message: true,
   response: true,
+  createdAt: true,
 });
 
 // Mood tracking
 export const moodEntries = pgTable("mood_entries", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
   mood: text("mood").notNull(), // Good, Okay, Struggling
   journal: text("journal"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const moodEntriesRelations = relations(moodEntries, ({ one }) => ({
+  user: one(users, {
+    fields: [moodEntries.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertMoodEntrySchema = createInsertSchema(moodEntries).pick({
   userId: true,

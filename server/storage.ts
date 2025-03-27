@@ -11,8 +11,20 @@ import {
   chatMessages, ChatMessage, InsertChatMessage,
   moodEntries, MoodEntry, InsertMoodEntry
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import session from "express-session";
+import { sql } from "drizzle-orm/sql";
+import createMemoryStore from "memorystore";
+
+const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
+  // Session store for authentication
+  sessionStore: any; // session.Store type
+  
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -78,6 +90,8 @@ export class MemStorage implements IStorage {
   private chatMessages: Map<number, ChatMessage>;
   private moodEntries: Map<number, MoodEntry>;
   
+  sessionStore: any;
+  
   private userId: number = 1;
   private courseId: number = 1;
   private lessonId: number = 1;
@@ -102,6 +116,11 @@ export class MemStorage implements IStorage {
     this.forumComments = new Map();
     this.chatMessages = new Map();
     this.moodEntries = new Map();
+    
+    // Initialize session store
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // 1 day
+    });
     
     // Initialize with some data
     this.initializeData();
@@ -510,4 +529,255 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // Session store for authentication
+  sessionStore: any;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      conObject: {
+        connectionString: process.env.DATABASE_URL
+      },
+      createTableIfMissing: true
+    });
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  // Course operations
+  async getCourses(): Promise<Course[]> {
+    return await db.select().from(courses);
+  }
+
+  async getCourse(id: number): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
+  }
+
+  async getCoursesByCategory(category: string): Promise<Course[]> {
+    return await db.select().from(courses).where(eq(courses.category, category));
+  }
+
+  async getCoursesByLevel(level: string): Promise<Course[]> {
+    return await db.select().from(courses).where(eq(courses.level, level));
+  }
+
+  async createCourse(course: InsertCourse): Promise<Course> {
+    const [newCourse] = await db.insert(courses).values(course).returning();
+    return newCourse;
+  }
+
+  // Lesson operations
+  async getLessonsByCourseId(courseId: number): Promise<Lesson[]> {
+    return await db
+      .select()
+      .from(lessons)
+      .where(eq(lessons.courseId, courseId))
+      .orderBy(lessons.order);
+  }
+
+  async getLesson(id: number): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson;
+  }
+
+  async getFeaturedLesson(): Promise<Lesson | undefined> {
+    const [lesson] = await db
+      .select()
+      .from(lessons)
+      .where(eq(lessons.isFeatured, true));
+    return lesson;
+  }
+
+  async createLesson(lesson: InsertLesson): Promise<Lesson> {
+    const [newLesson] = await db.insert(lessons).values(lesson).returning();
+    return newLesson;
+  }
+
+  // Module operations
+  async getModulesByCourseId(courseId: number): Promise<Module[]> {
+    return await db
+      .select()
+      .from(modules)
+      .where(eq(modules.courseId, courseId))
+      .orderBy(modules.order);
+  }
+
+  async createModule(module: InsertModule): Promise<Module> {
+    const [newModule] = await db.insert(modules).values(module).returning();
+    return newModule;
+  }
+
+  // User progress operations
+  async getUserProgress(userId: number, courseId: number): Promise<UserProgress | undefined> {
+    const [progress] = await db
+      .select()
+      .from(userProgress)
+      .where(
+        and(
+          eq(userProgress.userId, userId),
+          eq(userProgress.courseId, courseId)
+        )
+      );
+    return progress;
+  }
+
+  async updateUserProgress(progress: InsertUserProgress): Promise<UserProgress> {
+    const { userId, courseId } = progress;
+    const existingProgress = await this.getUserProgress(userId, courseId);
+    
+    if (existingProgress) {
+      const [updated] = await db
+        .update(userProgress)
+        .set({ ...progress, lastAccessed: new Date() })
+        .where(eq(userProgress.id, existingProgress.id))
+        .returning();
+      return updated;
+    } else {
+      const [newProgress] = await db
+        .insert(userProgress)
+        .values({ ...progress, lastAccessed: new Date() })
+        .returning();
+      return newProgress;
+    }
+  }
+
+  // Quiz operations
+  async getQuizzesByLessonId(lessonId: number): Promise<Quiz[]> {
+    return await db
+      .select()
+      .from(quizzes)
+      .where(eq(quizzes.lessonId, lessonId));
+  }
+
+  async getQuiz(id: number): Promise<Quiz | undefined> {
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
+    return quiz;
+  }
+
+  async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
+    const [newQuiz] = await db.insert(quizzes).values(quiz).returning();
+    return newQuiz;
+  }
+
+  // Cheat sheet operations
+  async getCheatSheets(): Promise<CheatSheet[]> {
+    return await db.select().from(cheatSheets);
+  }
+
+  async getCheatSheet(id: number): Promise<CheatSheet | undefined> {
+    const [cheatSheet] = await db.select().from(cheatSheets).where(eq(cheatSheets.id, id));
+    return cheatSheet;
+  }
+
+  async createCheatSheet(cheatSheet: InsertCheatSheet): Promise<CheatSheet> {
+    const [newCheatSheet] = await db.insert(cheatSheets).values(cheatSheet).returning();
+    return newCheatSheet;
+  }
+
+  // Forum operations
+  async getForumPosts(): Promise<ForumPost[]> {
+    return await db
+      .select()
+      .from(forumPosts)
+      .orderBy(desc(forumPosts.createdAt));
+  }
+
+  async getForumPost(id: number): Promise<ForumPost | undefined> {
+    const [post] = await db.select().from(forumPosts).where(eq(forumPosts.id, id));
+    return post;
+  }
+
+  async createForumPost(post: InsertForumPost): Promise<ForumPost> {
+    const now = new Date();
+    const [newPost] = await db
+      .insert(forumPosts)
+      .values({
+        ...post,
+        createdAt: now,
+        updatedAt: now,
+        likes: 0
+      })
+      .returning();
+    return newPost;
+  }
+
+  async getPostComments(postId: number): Promise<ForumComment[]> {
+    return await db
+      .select()
+      .from(forumComments)
+      .where(eq(forumComments.postId, postId))
+      .orderBy(forumComments.createdAt);
+  }
+
+  async createForumComment(comment: InsertForumComment): Promise<ForumComment> {
+    const now = new Date();
+    const [newComment] = await db
+      .insert(forumComments)
+      .values({
+        ...comment,
+        createdAt: now,
+        updatedAt: now,
+        likes: 0
+      })
+      .returning();
+    return newComment;
+  }
+
+  // Chat operations
+  async saveChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [newMessage] = await db
+      .insert(chatMessages)
+      .values({
+        ...message,
+        createdAt: new Date()
+      })
+      .returning();
+    return newMessage;
+  }
+
+  async getUserChatHistory(userId: number): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.userId, userId))
+      .orderBy(chatMessages.createdAt);
+  }
+
+  // Mood tracking operations
+  async saveMoodEntry(entry: InsertMoodEntry): Promise<MoodEntry> {
+    const [newEntry] = await db
+      .insert(moodEntries)
+      .values({
+        ...entry,
+        createdAt: new Date()
+      })
+      .returning();
+    return newEntry;
+  }
+
+  async getUserMoodEntries(userId: number): Promise<MoodEntry[]> {
+    return await db
+      .select()
+      .from(moodEntries)
+      .where(eq(moodEntries.userId, userId))
+      .orderBy(desc(moodEntries.createdAt));
+  }
+}
+
+// Initialize database for the application
+export const storage = new DatabaseStorage();
