@@ -254,8 +254,12 @@ export class MemStorage implements IStorage {
       };
     } else {
       progress = { 
-        ...insertProgress, 
         id: this.progressId++, 
+        userId: insertProgress.userId,
+        courseId: insertProgress.courseId,
+        lessonId: insertProgress.lessonId || null,
+        progress: insertProgress.progress || null,
+        completed: insertProgress.completed || null,
         lastAccessed: new Date(),
         quizzesPassed: insertProgress.quizzesPassed || 0,
         completedLessons: insertProgress.completedLessons || 0
@@ -279,7 +283,15 @@ export class MemStorage implements IStorage {
   
   async createQuiz(insertQuiz: InsertQuiz): Promise<Quiz> {
     const id = this.quizId++;
-    const quiz: Quiz = { ...insertQuiz, id };
+    const quiz: Quiz = { 
+      id,
+      title: insertQuiz.title,
+      description: insertQuiz.description || null,
+      courseId: insertQuiz.courseId,
+      lessonId: insertQuiz.lessonId,
+      questions: insertQuiz.questions,
+      passingScore: insertQuiz.passingScore || null
+    };
     this.quizzes.set(id, quiz);
     return quiz;
   }
@@ -303,7 +315,10 @@ export class MemStorage implements IStorage {
   // Forum operations
   async getForumPosts(): Promise<ForumPost[]> {
     return Array.from(this.forumPosts.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
   }
   
   async getForumPost(id: number): Promise<ForumPost | undefined> {
@@ -314,8 +329,12 @@ export class MemStorage implements IStorage {
     const id = this.forumPostId++;
     const now = new Date();
     const post: ForumPost = { 
-      ...insertPost, 
-      id, 
+      id,
+      userId: insertPost.userId,
+      title: insertPost.title,
+      content: insertPost.content,
+      tags: insertPost.tags ?? null,
+      anonymous: insertPost.anonymous ?? null,
       createdAt: now, 
       updatedAt: now, 
       likes: 0
@@ -327,15 +346,21 @@ export class MemStorage implements IStorage {
   async getPostComments(postId: number): Promise<ForumComment[]> {
     return Array.from(this.forumComments.values())
       .filter(comment => comment.postId === postId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
   }
   
   async createForumComment(insertComment: InsertForumComment): Promise<ForumComment> {
     const id = this.commentId++;
     const now = new Date();
     const comment: ForumComment = {
-      ...insertComment,
       id,
+      postId: insertComment.postId,
+      userId: insertComment.userId,
+      content: insertComment.content,
+      anonymous: insertComment.anonymous ?? null,
       createdAt: now,
       updatedAt: now,
       likes: 0
@@ -348,8 +373,10 @@ export class MemStorage implements IStorage {
   async saveChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
     const id = this.chatMessageId++;
     const message: ChatMessage = {
-      ...insertMessage,
       id,
+      userId: insertMessage.userId,
+      message: insertMessage.message,
+      response: insertMessage.response,
       createdAt: new Date()
     };
     this.chatMessages.set(id, message);
@@ -359,15 +386,20 @@ export class MemStorage implements IStorage {
   async getUserChatHistory(userId: number): Promise<ChatMessage[]> {
     return Array.from(this.chatMessages.values())
       .filter(message => message.userId === userId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
   }
   
   // Mood tracking operations
   async saveMoodEntry(insertEntry: InsertMoodEntry): Promise<MoodEntry> {
     const id = this.moodEntryId++;
     const entry: MoodEntry = {
-      ...insertEntry,
       id,
+      userId: insertEntry.userId,
+      mood: insertEntry.mood,
+      journal: insertEntry.journal || null,
       createdAt: new Date()
     };
     this.moodEntries.set(id, entry);
@@ -377,7 +409,10 @@ export class MemStorage implements IStorage {
   async getUserMoodEntries(userId: number): Promise<MoodEntry[]> {
     return Array.from(this.moodEntries.values())
       .filter(entry => entry.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => {
+        if (!a.createdAt || !b.createdAt) return 0;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
   }
   
   // Initialize with sample data
@@ -790,10 +825,7 @@ export class DatabaseStorage implements IStorage {
   async saveMoodEntry(entry: InsertMoodEntry): Promise<MoodEntry> {
     const [newEntry] = await db
       .insert(moodEntries)
-      .values({
-        ...entry,
-        createdAt: new Date()
-      })
+      .values(entry)
       .returning();
     return newEntry;
   }

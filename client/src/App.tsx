@@ -20,6 +20,10 @@ import { MessageSquare, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FloatingChatBot from "./components/shared/FloatingChatBot";
 
+// Import the mental health subpages
+import MoodJournal from "@/pages/mental-health/journal";
+import BreathingExercise from "@/pages/mental-health/breathing";
+
 function Router() {
   return (
     <Switch>
@@ -31,6 +35,8 @@ function Router() {
       <Route path="/courses/:id" component={CourseDetail} />
       <ProtectedRoute path="/quiz/:id" component={QuizPage} />
       <Route path="/mental-health" component={MentalHealth} />
+      <Route path="/mental-health/journal" component={MoodJournal} />
+      <Route path="/mental-health/breathing" component={BreathingExercise} />
       <Route path="/cheat-sheets" component={CheatSheets} />
       <ProtectedRoute path="/community" component={Community} />
       <Route component={NotFound} />

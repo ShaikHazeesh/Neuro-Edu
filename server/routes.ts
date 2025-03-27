@@ -727,6 +727,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch mood entries" });
     }
   });
+  
+  apiRouter.post("/api/mood", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as Express.User).id;
+      const { mood, journal } = req.body;
+      
+      if (!mood) {
+        return res.status(400).json({ message: "Mood is required" });
+      }
+      
+      const moodEntry = await storage.saveMoodEntry({
+        userId,
+        mood,
+        journal: journal || null
+      });
+      
+      res.status(201).json(moodEntry);
+    } catch (error) {
+      console.error("Error saving mood entry:", error);
+      res.status(500).json({ message: "Failed to save mood entry" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
