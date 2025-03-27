@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         progress,
         stats: {
           totalLessons,
-          totalQuizzes,
+          completedQuizzes: totalQuizzes,
           overallProgress,
           courseCount: progress.length,
           activeCourses: progress.filter(course => course.progress > 0).length,

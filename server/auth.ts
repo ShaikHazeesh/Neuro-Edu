@@ -33,16 +33,21 @@ export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "studybuddy-secret-key", // Should be set in environment variables
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true, // Changed to true to ensure session is created
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Changed to false for development
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      httpOnly: true,
+      sameSite: 'lax'
     },
   };
 
+  // Enable express-session
   app.set("trust proxy", 1);
   app.use(session(sessionSettings));
+  
+  // Initialize Passport
   app.use(passport.initialize());
   app.use(passport.session());
 
