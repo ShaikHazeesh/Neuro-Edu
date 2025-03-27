@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import MainLayout from "@/components/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -754,12 +754,11 @@ const QuizPage = () => {
                 </div>
                 
                 <div className="p-4 border-t bg-gray-50 dark:bg-gray-800/50 flex flex-wrap gap-3 justify-between">
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate(`/course-detail/${quiz.courseId}`)}
-                  >
-                    Back to Course
-                  </Button>
+                  <Link to={`/courses/${quiz.courseId}`}>
+                    <Button variant="outline">
+                      Back to Course
+                    </Button>
+                  </Link>
                   
                   <Button
                     onClick={() => {
