@@ -48,10 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add progress information if logged in
       // In a real app, this would check the session and add actual progress data
-      // For now, we'll add mock progress to illustrate functionality
+      // For now, we'll set progress to 0
       const coursesWithProgress = courses.map(course => ({
         ...course,
-        progress: Math.floor(Math.random() * 100) // Just for demonstration
+        progress: 0 // Always start at 0% for new users
       }));
       
       res.json(coursesWithProgress);
@@ -77,8 +77,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const modules = await storage.getModulesByCourseId(courseId);
       const lessons = await storage.getLessonsByCourseId(courseId);
       
-      // Get progress data (mock for now)
-      const progress = Math.floor(Math.random() * 100);
+      // Set progress data to 0% for new users
+      const progress = 0;
 
       res.json({
         ...course,

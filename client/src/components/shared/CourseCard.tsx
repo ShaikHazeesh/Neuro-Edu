@@ -77,16 +77,12 @@ export default function CourseCard({
               <BookOpen className="h-4 w-4" />
               <span>{lessonCount} lessons</span>
             </div>
-            {progress > 0 && (
-              <div className="flex items-center gap-1">
-                <Award className="h-4 w-4 text-primary" />
-                <span className="text-primary">{progress}% complete</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <Award className="h-4 w-4 text-primary" />
+              <span className="text-primary">{progress}% complete</span>
+            </div>
           </div>
-          {progress > 0 && (
-            <Progress value={progress} className="h-1.5 mb-4" />
-          )}
+          <Progress value={progress} className="h-1.5 mb-4" />
         </CardContent>
         <CardFooter>
           <Button asChild className="w-full gap-2">
