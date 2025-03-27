@@ -9,11 +9,13 @@ import Courses from "@/pages/courses";
 import MentalHealth from "@/pages/mental-health";
 import CheatSheets from "@/pages/cheat-sheets";
 import Community from "@/pages/community";
+import Dashboard from "@/pages/dashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/courses" component={Courses} />
       <Route path="/courses/:id" component={CourseDetail} />
       <Route path="/mental-health" component={MentalHealth} />

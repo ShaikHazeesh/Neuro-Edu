@@ -7,7 +7,7 @@ const navLinks = [
   { name: "Courses", href: "/courses" },
   { name: "Mental Health", href: "/mental-health" },
   { name: "Community", href: "/community" },
-  { name: "Tools", href: "/tools" },
+  { name: "Cheat Sheets", href: "/cheat-sheets" },
 ];
 
 const Header = () => {
@@ -15,6 +15,8 @@ const Header = () => {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  // Mock user state for demo (in a real app, this would come from auth context)
+  const [isLoggedIn] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,11 +71,29 @@ const Header = () => {
             <span className="material-icons dark:hidden">dark_mode</span>
             <span className="material-icons hidden dark:block">light_mode</span>
           </motion.button>
-          <Link href="/signin">
-            <a className="hidden md:block bg-primary hover:bg-opacity-90 text-white dark:bg-accent dark:text-darkBg px-4 py-2 rounded-standard text-sm font-medium transition-colors">
-              Sign In
-            </a>
-          </Link>
+          {isLoggedIn ? (
+            <div className="hidden md:flex items-center space-x-2">
+              <Link href="/dashboard">
+                <a className="flex items-center px-4 py-2 rounded-standard text-sm font-medium text-primary dark:text-accent hover:bg-primary/10 dark:hover:bg-accent/10 transition-colors">
+                  <span className="material-icons mr-1 text-sm">dashboard</span>
+                  Dashboard
+                </a>
+              </Link>
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                <img 
+                  src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" 
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          ) : (
+            <Link href="/signin">
+              <a className="hidden md:block bg-primary hover:bg-opacity-90 text-white dark:bg-accent dark:text-darkBg px-4 py-2 rounded-standard text-sm font-medium transition-colors">
+                Sign In
+              </a>
+            </Link>
+          )}
           <button 
             className="md:hidden text-textColor dark:text-darkText"
             onClick={toggleMobileMenu}
@@ -110,14 +130,38 @@ const Header = () => {
                   </a>
                 </Link>
               ))}
-              <Link href="/signin">
-                <a 
-                  className="block bg-primary hover:bg-opacity-90 text-white dark:bg-accent dark:text-darkBg px-4 py-2 rounded-standard text-sm font-medium transition-colors text-center mt-4"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </a>
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link href="/dashboard">
+                    <a 
+                      className="block py-2 text-sm font-medium flex items-center text-primary dark:text-accent"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span className="material-icons mr-1 text-sm">dashboard</span>
+                      Dashboard
+                    </a>
+                  </Link>
+                  <div className="flex items-center py-2 mt-2 space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex-shrink-0 overflow-hidden">
+                      <img 
+                        src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" 
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="text-sm font-medium">Alex Johnson</span>
+                  </div>
+                </>
+              ) : (
+                <Link href="/signin">
+                  <a 
+                    className="block bg-primary hover:bg-opacity-90 text-white dark:bg-accent dark:text-darkBg px-4 py-2 rounded-standard text-sm font-medium transition-colors text-center mt-4"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </a>
+                </Link>
+              )}
             </div>
           </motion.div>
         )}
