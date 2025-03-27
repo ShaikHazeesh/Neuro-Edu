@@ -431,7 +431,37 @@ const QuizPage = () => {
     return Math.round((correctAnswers / quiz.questions.length) * 100);
   };
   
-  const handleQuizSubmit = () => {
+  const saveQuizResult = async (score: number) => {
+    try {
+      if (!quiz) return;
+      
+      const response = await fetch(`/api/quizzes/${quiz.id}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          score,
+          answers
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save quiz result');
+      }
+      
+      console.log('Quiz result saved successfully');
+    } catch (error) {
+      console.error('Error saving quiz result:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update your progress. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleQuizSubmit = async () => {
     // Save answer for the last question if not already saved
     if (!quizCompleted) {
       setAnswers(prev => ({
@@ -443,8 +473,8 @@ const QuizPage = () => {
       setScore(finalScore);
       setQuizCompleted(true);
       
-      // In a real app, we would save the result to the backend
-      // saveQuizResult();
+      // Save result to the backend
+      await saveQuizResult(finalScore);
       
       toast({
         title: finalScore >= (quiz?.passingScore || 70) ? "Quiz Completed!" : "Quiz Completed",

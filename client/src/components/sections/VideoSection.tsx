@@ -1,17 +1,68 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ReactPlayer from "react-player/lazy";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 const VideoSection = () => {
   const [playing, setPlaying] = useState(false);
   const [activeModule, setActiveModule] = useState(1);
+  const [lessonCompleted, setLessonCompleted] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { data: videoLesson, isLoading } = useQuery({
     queryKey: ['/api/lessons/featured'],
   });
+  
+  // Mutation to mark lesson as completed
+  const completeLessonMutation = useMutation({
+    mutationFn: async (lessonId: number) => {
+      const response = await apiRequest("POST", `/api/lessons/${lessonId}/complete`);
+      return response.json();
+    },
+    onSuccess: () => {
+      setLessonCompleted(true);
+      toast({
+        title: "Lesson Completed!",
+        description: "Your progress has been updated.",
+        variant: "default",
+      });
+      // Invalidate queries to refresh user progress data
+      queryClient.invalidateQueries({ queryKey: ["/api/user/progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+    },
+    onError: (error) => {
+      console.error("Error marking lesson as completed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update lesson progress. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleMarkAsCompleted = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to track your progress.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (videoLesson?.id) {
+      completeLessonMutation.mutate(videoLesson.id);
+    }
+  };
   
   const handlePlayVideo = () => {
     setPlaying(true);
@@ -249,9 +300,25 @@ const VideoSection = () => {
               </div>
               
               <div className="mt-6">
-                <button className="w-full bg-primary hover:bg-opacity-90 text-white py-2 rounded-standard font-medium text-sm transition-colors">
-                  Continue Learning
-                </button>
+                {lessonCompleted ? (
+                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white" disabled>
+                    <CheckCircle className="w-4 h-4 mr-2" /> Lesson Completed
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-primary hover:bg-opacity-90 text-white"
+                    onClick={handleMarkAsCompleted}
+                    disabled={completeLessonMutation.isPending}
+                  >
+                    {completeLessonMutation.isPending ? (
+                      <span className="flex items-center">
+                        <span className="material-icons animate-spin mr-2">refresh</span> Updating...
+                      </span>
+                    ) : (
+                      "Mark as Completed"
+                    )}
+                  </Button>
+                )}
               </div>
               
               <div className="mt-4">
