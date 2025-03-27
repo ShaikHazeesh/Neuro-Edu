@@ -48,7 +48,7 @@ const CheatSheets = () => {
               </div>
             ))
           ) : (
-            cheatSheets?.map((cheatSheet) => (
+            Array.isArray(cheatSheets) && cheatSheets.map((cheatSheet) => (
               <CheatSheetCard key={cheatSheet.id} cheatSheet={cheatSheet} />
             )) || (
               <>

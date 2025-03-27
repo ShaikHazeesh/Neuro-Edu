@@ -90,7 +90,7 @@ export default function CourseCard({
         </CardContent>
         <CardFooter>
           <Button asChild className="w-full gap-2">
-            <Link href={`/courses/${id}`}>
+            <Link to={`/courses/${id}`}>
               {progress > 0 ? (
                 <>
                   <Play className="h-4 w-4" /> Continue Learning

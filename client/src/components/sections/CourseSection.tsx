@@ -81,7 +81,18 @@ const CourseSection = () => {
             ))
           ) : (
             courses?.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard 
+                key={course.id}
+                id={course.id}
+                title={course.title}
+                description={course.description || ""}
+                imageUrl={course.imageUrl}
+                category={course.category}
+                level={course.level}
+                duration={course.duration}
+                lessonCount={course.lectureCount || course.lessonCount}
+                progress={course.progress || 0}
+              />
             )) || (
               <div className="col-span-full text-center py-10">
                 <p className="text-gray-500 dark:text-gray-400">No courses available at the moment</p>
@@ -97,7 +108,7 @@ const CourseSection = () => {
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
         >
-          <Link href="/courses" className="px-6 py-3 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
+          <Link to="/courses" className="px-6 py-3 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
             View All Courses
           </Link>
         </motion.div>

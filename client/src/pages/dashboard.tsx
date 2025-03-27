@@ -285,9 +285,9 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="mb-2">
-                          <Progress value={course.progress} className="h-2" />
+                          <Progress value={course.progress || 0} className="h-2" />
                           <div className="flex justify-between text-xs mt-1">
-                            <span>{course.progress}% complete</span>
+                            <span>{course.progress || 0}% complete</span>
                             <span>{course.lectureCount} lectures</span>
                           </div>
                         </div>
@@ -316,9 +316,9 @@ const Dashboard = () => {
                     <div key={goal.id}>
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">{goal.title}</span>
-                        <span className="text-sm text-gray-500">{goal.progress}%</span>
+                        <span className="text-sm text-gray-500">{goal.progress || 0}%</span>
                       </div>
-                      <Progress value={goal.progress} className="h-2" />
+                      <Progress value={goal.progress || 0} className="h-2" />
                     </div>
                   ))}
                 </div>
@@ -626,7 +626,18 @@ const Dashboard = () => {
                 ))
               ) : (
                 courses && Array.isArray(courses) && courses.map((course: any) => (
-                  <CourseCard key={course.id} course={course} />
+                  <CourseCard 
+                    key={course.id}
+                    id={course.id}
+                    title={course.title}
+                    description={course.description || ""}
+                    imageUrl={course.imageUrl}
+                    category={course.category}
+                    level={course.level}
+                    duration={course.duration}
+                    lessonCount={course.lectureCount}
+                    progress={course.progress || 0}
+                  />
                 ))
               )}
             </div>
