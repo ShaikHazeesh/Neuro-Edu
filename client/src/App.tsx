@@ -15,6 +15,7 @@ import Community from "@/pages/community";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth-page";
 import Profile from "@/pages/profile";
+import QuizPage from "@/pages/quiz-page";
 import { MessageSquare, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FloatingChatBot from "./components/shared/FloatingChatBot";
@@ -28,6 +29,7 @@ function Router() {
       <ProtectedRoute path="/profile" component={Profile} />
       <Route path="/courses" component={Courses} />
       <Route path="/courses/:id" component={CourseDetail} />
+      <ProtectedRoute path="/quiz/:id" component={QuizPage} />
       <Route path="/mental-health" component={MentalHealth} />
       <Route path="/cheat-sheets" component={CheatSheets} />
       <ProtectedRoute path="/community" component={Community} />

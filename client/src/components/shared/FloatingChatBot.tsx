@@ -41,7 +41,7 @@ export default function FloatingChatBot() {
       if (!user) return;
       
       try {
-        const response = await fetch('/api/chat/history');
+        const response = await fetch('/api/user/chat-history');
         if (response.ok) {
           const history = await response.json();
           if (history && history.length > 0) {
@@ -64,7 +64,8 @@ export default function FloatingChatBot() {
               });
             });
             
-            setMessages([...messages, ...formattedHistory]);
+            // Set messages with welcome message + history
+            setMessages(prev => [prev[0], ...formattedHistory]);
           }
         }
       } catch (error) {
@@ -92,12 +93,18 @@ export default function FloatingChatBot() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: userMessage.text }),
+        body: JSON.stringify({ 
+          message: userMessage.text,
+          history: messages.map(msg => ({
+            role: msg.isUser ? 'user' : 'assistant',
+            content: msg.text
+          }))
+        }),
       });
 
       if (!response.ok) {

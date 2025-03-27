@@ -97,10 +97,8 @@ const CourseSection = () => {
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
         >
-          <Link href="/courses">
-            <a className="px-6 py-3 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
-              View All Courses
-            </a>
+          <Link href="/courses" className="px-6 py-3 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
+            View All Courses
           </Link>
         </motion.div>
       </div>

@@ -19,15 +19,11 @@ const Hero = () => {
               A supportive learning platform designed for students dealing with mental health challenges while building their programming career.
             </p>
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link href="/courses">
-                <a className="bg-primary hover:bg-opacity-90 text-white px-6 py-3 rounded-standard font-medium text-center transition-all shadow-soft hover:shadow-md">
-                  Explore Courses
-                </a>
+              <Link href="/courses" className="bg-primary hover:bg-opacity-90 text-white px-6 py-3 rounded-standard font-medium text-center transition-all shadow-soft hover:shadow-md">
+                Explore Courses
               </Link>
-              <Link href="/mental-health">
-                <a className="bg-white dark:bg-darkBg border border-primary dark:border-accent text-primary dark:text-accent px-6 py-3 rounded-standard font-medium text-center transition-all hover:bg-primary/5 dark:hover:bg-accent/10 shadow-soft">
-                  Mental Health Support
-                </a>
+              <Link href="/mental-health" className="bg-white dark:bg-darkBg border border-primary dark:border-accent text-primary dark:text-accent px-6 py-3 rounded-standard font-medium text-center transition-all hover:bg-primary/5 dark:hover:bg-accent/10 shadow-soft">
+                Mental Health Support
               </Link>
             </div>
           </motion.div>

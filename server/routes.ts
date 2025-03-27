@@ -157,6 +157,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quiz endpoints
+  apiRouter.get("/api/quizzes/:id", async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ message: "Invalid quiz ID" });
+      }
+
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: "Quiz not found" });
+      }
+
+      res.json(quiz);
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
+      res.status(500).json({ message: "Failed to fetch quiz details" });
+    }
+  });
+  
+  // Submit quiz result (protected)
+  apiRouter.post("/api/quizzes/:id/submit", isAuthenticated, async (req, res) => {
+    try {
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ message: "Invalid quiz ID" });
+      }
+      
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: "Quiz not found" });
+      }
+      
+      const resultSchema = z.object({
+        score: z.number().min(0).max(100),
+        answers: z.record(z.string(), z.union([z.string(), z.array(z.string())]))
+      });
+      
+      const resultData = resultSchema.parse(req.body);
+      const userId = (req.user as Express.User).id;
+      
+      // In a production app, we would store the quiz results
+      // For now, just update the user progress to count this quiz
+      const userProgress = await storage.getUserProgress(userId, quiz.courseId);
+      if (userProgress) {
+        // Mock logic to update user progress with quiz completion
+        const updatedProgress = {
+          ...userProgress,
+          progress: Math.min(100, (userProgress.progress || 0) + 10), // Add 10% to progress
+          quizzesPassed: (userProgress.quizzesPassed || 0) + (resultData.score >= (quiz.passingScore || 70) ? 1 : 0),
+          lastAccessed: new Date()
+        };
+        
+        await storage.updateUserProgress(updatedProgress);
+      } else {
+        // Create new progress entry
+        await storage.updateUserProgress({
+          userId,
+          courseId: quiz.courseId,
+          progress: 10, // Start with 10% progress
+          quizzesPassed: resultData.score >= (quiz.passingScore || 70) ? 1 : 0,
+          lastAccessed: new Date()
+        });
+      }
+      
+      // Return the processed results
+      res.json({ 
+        success: true, 
+        passed: resultData.score >= (quiz.passingScore || 70),
+        score: resultData.score,
+        passingScore: quiz.passingScore || 70
+      });
+    } catch (error) {
+      console.error("Error submitting quiz result:", error);
+      if (error instanceof ZodError) {
+        return handleZodError(error, res);
+      }
+      res.status(500).json({ message: "Failed to submit quiz result" });
+    }
+  });
+
   // Cheat sheets endpoints
   apiRouter.get("/api/cheatsheets", async (req, res) => {
     try {
@@ -458,6 +539,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat history endpoint
+  apiRouter.get("/api/user/chat-history", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as Express.User).id;
+      const chatHistory = await storage.getUserChatHistory(userId);
+      res.json(chatHistory);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+  
   apiRouter.get("/api/mood", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.user as Express.User).id;
