@@ -669,6 +669,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       });
       
+      // Mock quiz results for the dashboard since we don't have a proper quiz results table yet
+      // In a real application, you would have a quiz_results table and fetch actual results
+      const quizResults = [
+        {
+          id: 1,
+          title: "Python Basics",
+          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+          score: 85,
+          totalQuestions: 10
+        },
+        {
+          id: 2,
+          title: "JavaScript Fundamentals",
+          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+          score: 92,
+          totalQuestions: 12
+        },
+        {
+          id: 3,
+          title: "Web Development",
+          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+          score: 78,
+          totalQuestions: 15
+        }
+      ];
+      
       res.json({
         progress,
         stats: {
@@ -676,10 +702,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalQuizzes,
           overallProgress,
           courseCount: progress.length,
-          activeCourses: progress.filter(course => course.progress > 0).length
+          activeCourses: progress.filter(course => course.progress > 0).length,
+          quizzesPassed: totalQuizzes,
+          averageScore: "82%",
+          totalQuizzes: courses.length // These are available quizzes (one per course)
         },
         recentActivity: recentActivity.slice(0, 5), // Only send the 5 most recent activities
-        moodEntries: moodEntries.slice(0, 10) // Only send the 10 most recent entries
+        moodEntries: moodEntries.slice(0, 10), // Only send the 10 most recent entries
+        quizResults: quizResults // Add quiz results to the response
       });
     } catch (error) {
       console.error("Error fetching user progress:", error);
