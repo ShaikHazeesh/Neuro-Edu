@@ -128,6 +128,8 @@ export const userProgress = pgTable("user_progress", {
   progress: integer("progress").default(0), // Percentage of completion
   lastAccessed: timestamp("last_accessed").defaultNow(),
   completed: boolean("completed").default(false),
+  quizzesPassed: integer("quizzes_passed").default(0),
+  completedLessons: integer("completed_lessons").default(0),
 });
 
 export const userProgressRelations = relations(userProgress, ({ one }) => ({
@@ -151,15 +153,19 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
   lessonId: true,
   progress: true,
   completed: true,
+  quizzesPassed: true,
+  completedLessons: true,
 });
 
 // Quiz model
 export const quizzes = pgTable("quizzes", {
   id: serial("id").primaryKey(),
   lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   description: text("description"),
   questions: json("questions").notNull(), // JSON array of quiz questions
+  passingScore: integer("passing_score").default(70),
 });
 
 export const quizzesRelations = relations(quizzes, ({ one }) => ({
@@ -167,13 +173,19 @@ export const quizzesRelations = relations(quizzes, ({ one }) => ({
     fields: [quizzes.lessonId],
     references: [lessons.id],
   }),
+  course: one(courses, {
+    fields: [quizzes.courseId],
+    references: [courses.id],
+  }),
 }));
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
   lessonId: true,
+  courseId: true,
   title: true,
   description: true,
   questions: true,
+  passingScore: true,
 });
 
 // Cheat sheet model

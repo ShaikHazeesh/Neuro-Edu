@@ -156,6 +156,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch lesson details" });
     }
   });
+  
+  // Mark lesson as completed (protected)
+  apiRouter.post("/api/lessons/:id/complete", isAuthenticated, async (req, res) => {
+    try {
+      const lessonId = parseInt(req.params.id);
+      if (isNaN(lessonId)) {
+        return res.status(400).json({ message: "Invalid lesson ID" });
+      }
+      
+      const lesson = await storage.getLesson(lessonId);
+      if (!lesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+      
+      const userId = (req.user as Express.User).id;
+      const userProgress = await storage.getUserProgress(userId, lesson.courseId);
+      
+      if (userProgress) {
+        // Update existing progress
+        const updatedProgress = {
+          ...userProgress,
+          lessonId,
+          progress: Math.min(100, (userProgress.progress || 0) + 15), // Add 15% to progress for completing a lesson
+          completedLessons: (userProgress.completedLessons || 0) + 1
+        };
+        
+        await storage.updateUserProgress(updatedProgress);
+      } else {
+        // Create new progress entry
+        await storage.updateUserProgress({
+          userId,
+          courseId: lesson.courseId,
+          lessonId,
+          progress: 15, // Start with 15% progress
+          completedLessons: 1,
+          quizzesPassed: 0
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Lesson marked as completed",
+        progress: userProgress ? Math.min(100, (userProgress.progress || 0) + 15) : 15
+      });
+    } catch (error) {
+      console.error("Error marking lesson as completed:", error);
+      res.status(500).json({ message: "Failed to update lesson progress" });
+    }
+  });
 
   // Quiz endpoints
   apiRouter.get("/api/quizzes/:id", async (req, res) => {
@@ -198,16 +247,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resultData = resultSchema.parse(req.body);
       const userId = (req.user as Express.User).id;
       
-      // In a production app, we would store the quiz results
-      // For now, just update the user progress to count this quiz
+      // Update the user progress to track quiz completion
       const userProgress = await storage.getUserProgress(userId, quiz.courseId);
+      
+      // Check if the quiz was passed
+      const isPassed = resultData.score >= (quiz.passingScore || 70);
+      
       if (userProgress) {
-        // Mock logic to update user progress with quiz completion
+        // Update existing progress
         const updatedProgress = {
           ...userProgress,
           progress: Math.min(100, (userProgress.progress || 0) + 10), // Add 10% to progress
-          quizzesPassed: (userProgress.quizzesPassed || 0) + (resultData.score >= (quiz.passingScore || 70) ? 1 : 0),
-          lastAccessed: new Date()
+          quizzesPassed: (userProgress.quizzesPassed || 0) + (isPassed ? 1 : 0),
+          completedLessons: userProgress.completedLessons || 0
         };
         
         await storage.updateUserProgress(updatedProgress);
@@ -217,8 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           courseId: quiz.courseId,
           progress: 10, // Start with 10% progress
-          quizzesPassed: resultData.score >= (quiz.passingScore || 70) ? 1 : 0,
-          lastAccessed: new Date()
+          quizzesPassed: isPassed ? 1 : 0,
+          completedLessons: 0
         });
       }
       
@@ -548,6 +600,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching chat history:", error);
       res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+  
+  // User progress endpoint for dashboard
+  apiRouter.get("/api/user/progress", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as Express.User).id;
+      const courses = await storage.getCourses();
+      
+      // For each course, get the user's progress
+      const progress = await Promise.all(
+        courses.map(async (course) => {
+          const userProgress = await storage.getUserProgress(userId, course.id);
+          return {
+            courseId: course.id,
+            courseTitle: course.title,
+            courseDescription: course.description,
+            courseImage: course.imageUrl,
+            progress: userProgress?.progress || 0,
+            completedLessons: userProgress?.completedLessons || 0,
+            quizzesPassed: userProgress?.quizzesPassed || 0,
+            lastAccessed: userProgress?.lastAccessed || null
+          };
+        })
+      );
+      
+      // Get user's mood entries for the dashboard
+      const moodEntries = await storage.getUserMoodEntries(userId);
+      
+      // Calculate overall stats
+      const totalLessons = progress.reduce((sum, course) => sum + (course.completedLessons || 0), 0);
+      const totalQuizzes = progress.reduce((sum, course) => sum + (course.quizzesPassed || 0), 0);
+      const overallProgress = progress.length > 0 
+        ? Math.round(progress.reduce((sum, course) => sum + course.progress, 0) / progress.length) 
+        : 0;
+        
+      // Build recent activity log from both lessons and quizzes
+      const recentActivity = [];
+      
+      // Add completed lessons to activity
+      for (const course of progress) {
+        if (course.completedLessons > 0) {
+          recentActivity.push({
+            type: 'lesson',
+            courseId: course.courseId,
+            courseTitle: course.courseTitle,
+            timestamp: course.lastAccessed,
+            message: `Completed lesson in ${course.courseTitle}`
+          });
+        }
+        
+        if (course.quizzesPassed > 0) {
+          recentActivity.push({
+            type: 'quiz',
+            courseId: course.courseId,
+            courseTitle: course.courseTitle,
+            timestamp: course.lastAccessed,
+            message: `Passed quiz in ${course.courseTitle}`
+          });
+        }
+      }
+      
+      // Sort activity by timestamp
+      recentActivity.sort((a, b) => {
+        if (!a.timestamp) return 1;
+        if (!b.timestamp) return -1;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
+      
+      res.json({
+        progress,
+        stats: {
+          totalLessons,
+          totalQuizzes,
+          overallProgress,
+          courseCount: progress.length,
+          activeCourses: progress.filter(course => course.progress > 0).length
+        },
+        recentActivity: recentActivity.slice(0, 5), // Only send the 5 most recent activities
+        moodEntries: moodEntries.slice(0, 10) // Only send the 10 most recent entries
+      });
+    } catch (error) {
+      console.error("Error fetching user progress:", error);
+      res.status(500).json({ message: "Failed to fetch user progress" });
     }
   });
   

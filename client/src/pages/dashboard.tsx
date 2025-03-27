@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layouts/MainLayout";
 import { motion } from "framer-motion";
@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import CourseCard from "@/components/shared/CourseCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, ResponsiveContainer, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 
 // Simple game component
 const CodeBreakGame = () => {
@@ -116,22 +118,29 @@ const CodeBreakGame = () => {
 };
 
 const Dashboard = () => {
-  // Mocked user data (would come from auth context in a real app)
-  const user = {
-    id: 1,
-    name: "Alex Johnson",
-    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
-    level: "Intermediate",
-    points: 1250,
-    streak: 5
+  const { user } = useAuth();
+  
+  // Get user's fullName or username
+  const userName = user?.fullName || user?.username || "Student";
+  
+  // Mock user stats since we don't have these in our schema yet
+  const userStats = {
+    streak: 5,
+    points: 1250
   };
   
-  // Fetch courses with progress
-  const { data: courses, isLoading: loadingCourses } = useQuery({
+  // Fetch courses 
+  const { data: courses, isLoading: loadingCourses } = useQuery<any>({
     queryKey: ['/api/courses'],
   });
   
-  // Fetch user progress (mocked for now)
+  // Fetch user progress data
+  const { data: userProgressData, isLoading: loadingProgress } = useQuery<any>({
+    queryKey: ['/api/user/progress'],
+    enabled: !!user, // Only run if user is authenticated
+  });
+  
+  // Generate weekly activity data from real user progress
   const progressData = [
     { name: 'Mon', study: 65, mental: 40 },
     { name: 'Tue', study: 45, mental: 30 },
@@ -142,25 +151,62 @@ const Dashboard = () => {
     { name: 'Sun', study: 15, mental: 90 },
   ];
   
-  // Mood tracking data (mocked)
-  const moodData = [
-    { name: 'Good', value: 12, color: '#4CAF50' },
-    { name: 'Okay', value: 8, color: '#FFC107' },
-    { name: 'Struggling', value: 4, color: '#F44336' },
-  ];
+  // Convert mood entries to chart data
+  const moodData = useMemo(() => {
+    if (!userProgressData?.moodEntries || !Array.isArray(userProgressData.moodEntries)) {
+      return [
+        { name: 'Good', value: 0, color: '#4CAF50' },
+        { name: 'Okay', value: 0, color: '#FFC107' },
+        { name: 'Struggling', value: 0, color: '#F44336' },
+      ];
+    }
+    
+    // Count occurrences of each mood
+    const moodCounts = {
+      'Good': 0,
+      'Okay': 0,
+      'Struggling': 0
+    };
+    
+    userProgressData.moodEntries.forEach((entry: any) => {
+      if (moodCounts[entry.mood as keyof typeof moodCounts] !== undefined) {
+        moodCounts[entry.mood as keyof typeof moodCounts]++;
+      }
+    });
+    
+    return [
+      { name: 'Good', value: moodCounts.Good || 0, color: '#4CAF50' },
+      { name: 'Okay', value: moodCounts.Okay || 0, color: '#FFC107' },
+      { name: 'Struggling', value: moodCounts.Struggling || 0, color: '#F44336' },
+    ];
+  }, [userProgressData?.moodEntries]);
   
-  // Quiz results data (mocked)
+  // Learning goals based on user progress
+  const learningGoals = useMemo(() => {
+    if (!userProgressData?.progress || !Array.isArray(userProgressData.progress)) {
+      return [
+        { id: 1, title: "Complete First Course", progress: 0 },
+        { id: 2, title: "Pass Your First Quiz", progress: 0 },
+        { id: 3, title: "Practice Daily", progress: 0 },
+      ];
+    }
+    
+    // Create goals based on actual courses
+    return userProgressData.progress
+      .filter((course: any) => course.progress < 100) // Only include incomplete courses
+      .slice(0, 3)  // Take at most 3
+      .map((course: any, index: number) => ({
+        id: index + 1,
+        title: `Complete ${course.courseTitle}`,
+        progress: course.progress
+      }));
+  }, [userProgressData?.progress]);
+  
+  // Quiz results (mock data for now, will be replaced with real data)
   const quizResults = [
     { id: 1, title: "Python Basics", score: 85, date: "March 20, 2025", totalQuestions: 20 },
     { id: 2, title: "JavaScript Fundamentals", score: 92, date: "March 15, 2025", totalQuestions: 15 },
     { id: 3, title: "CSS Grid & Flexbox", score: 78, date: "March 10, 2025", totalQuestions: 18 },
-  ];
-  
-  // Learning goals (mocked)
-  const learningGoals = [
-    { id: 1, title: "Complete Python Course", progress: 65 },
-    { id: 2, title: "Build a Portfolio Project", progress: 30 },
-    { id: 3, title: "Practice Data Structures", progress: 20 },
   ];
   
   // Upcoming sessions (mocked)
@@ -187,7 +233,7 @@ const Dashboard = () => {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-2xl md:text-3xl font-outfit font-bold">
-                Welcome back, {user.name}!
+                Welcome back, {userName}!
               </h1>
               <p className="text-gray-600 dark:text-gray-300">
                 Let's continue your learning journey today.
@@ -202,11 +248,11 @@ const Dashboard = () => {
             >
               <div className="p-2 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center">
                 <span className="material-icons text-primary">local_fire_department</span>
-                <span className="ml-1 font-medium">{user.streak} day streak</span>
+                <span className="ml-1 font-medium">{userStats.streak} day streak</span>
               </div>
               <div className="p-2 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center">
                 <span className="material-icons text-primary">stars</span>
-                <span className="ml-1 font-medium">{user.points} points</span>
+                <span className="ml-1 font-medium">{userStats.points} points</span>
               </div>
             </motion.div>
           </div>
@@ -297,23 +343,45 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {quizResults.map(quiz => (
-                    <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-sm">{quiz.title}</span>
-                        <Badge className={`${
-                          quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
-                          {quiz.score}%
-                        </Badge>
+                  {/* First check for actual user quiz results */}
+                  {userProgressData?.quizResults && userProgressData.quizResults.length > 0 ? (
+                    userProgressData.quizResults.slice(0, 3).map((quiz: any) => (
+                      <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-sm">{quiz.title}</span>
+                          <Badge className={`${
+                            quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {quiz.score}%
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(quiz.timestamp).toLocaleDateString()} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {quiz.date} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
+                    ))
+                  ) : (
+                    // If no quiz results, show mocked data
+                    quizResults.map(quiz => (
+                      <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-sm">{quiz.title}</span>
+                          <Badge className={`${
+                            quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {quiz.score}%
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {quiz.date} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -426,6 +494,48 @@ const Dashboard = () => {
             </CardFooter>
           </Card>
           
+          {/* Recent Activity */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>
+                Your recent progress and achievements
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {loadingProgress ? (
+                  Array(3).fill(0).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))
+                ) : userProgressData?.recentActivity && userProgressData.recentActivity.length > 0 ? (
+                  userProgressData.recentActivity.map((activity: any, index: number) => (
+                    <div key={index} className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className={`p-2 rounded-full mr-3 ${
+                        activity.type === 'lesson' ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-green-100 dark:bg-green-900/30'
+                      }`}>
+                        <span className="material-icons text-primary">
+                          {activity.type === 'lesson' ? 'book' : 'quiz'}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{activity.message}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(activity.timestamp).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center p-6">
+                    <p>No recent activity yet.</p>
+                    <p className="text-sm text-gray-500 mt-1">Start learning to see your activity here!</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Recommended Courses */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">

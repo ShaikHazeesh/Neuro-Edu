@@ -224,13 +224,21 @@ export class MemStorage implements IStorage {
       progress = { 
         ...existingProgress, 
         ...insertProgress, 
-        lastAccessed: new Date() 
+        lastAccessed: new Date(),
+        quizzesPassed: (insertProgress.quizzesPassed !== undefined) 
+          ? insertProgress.quizzesPassed 
+          : (existingProgress.quizzesPassed || 0),
+        completedLessons: (insertProgress.completedLessons !== undefined) 
+          ? insertProgress.completedLessons 
+          : (existingProgress.completedLessons || 0)
       };
     } else {
       progress = { 
         ...insertProgress, 
         id: this.progressId++, 
-        lastAccessed: new Date() 
+        lastAccessed: new Date(),
+        quizzesPassed: insertProgress.quizzesPassed || 0,
+        completedLessons: insertProgress.completedLessons || 0
       };
     }
     

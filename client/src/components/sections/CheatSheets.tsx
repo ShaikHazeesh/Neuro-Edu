@@ -18,10 +18,8 @@ const CheatSheets = () => {
             <p className="text-gray-600 dark:text-gray-300 max-w-xl">Easily accessible cheat sheets to help reinforce key concepts.</p>
           </div>
           <div className="mt-4 md:mt-0">
-            <Link href="/cheat-sheets">
-              <a className="px-4 py-2 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard text-sm font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
-                View All Guides
-              </a>
+            <Link href="/cheat-sheets" className="px-4 py-2 border border-primary dark:border-accent text-primary dark:text-accent rounded-standard text-sm font-medium hover:bg-primary/5 dark:hover:bg-accent/10 transition-colors inline-block">
+              View All Guides
             </Link>
           </div>
         </div>
