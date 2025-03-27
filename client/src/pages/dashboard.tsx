@@ -202,12 +202,8 @@ const Dashboard = () => {
       }));
   }, [userProgressData?.progress]);
   
-  // Quiz results (mock data for now, will be replaced with real data)
-  const quizResults = [
-    { id: 1, title: "Python Basics", score: 85, date: "March 20, 2025", totalQuestions: 20 },
-    { id: 2, title: "JavaScript Fundamentals", score: 92, date: "March 15, 2025", totalQuestions: 15 },
-    { id: 3, title: "CSS Grid & Flexbox", score: 78, date: "March 10, 2025", totalQuestions: 18 },
-  ];
+  // An empty array for quiz results, will be filled with real data when available
+  const quizResults: { id: number; title: string; score: number; date: string; totalQuestions: number }[] = [];
   
   // Upcoming sessions (mocked)
   const upcomingSessions = [
@@ -361,7 +357,7 @@ const Dashboard = () => {
                   <CardContent>
                     <div className="space-y-3">
                       {/* First check for actual user quiz results */}
-                      {userProgressData?.quizResults && userProgressData.quizResults.length > 0 ? (
+                      {userProgressData?.quizResults && userProgressData.quizResults.length > 0 ? 
                         userProgressData.quizResults.slice(0, 3).map((quiz: any) => (
                           <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                             <div className="flex justify-between items-center mb-1">
@@ -379,26 +375,13 @@ const Dashboard = () => {
                             </div>
                           </div>
                         ))
-                      ) : (
-                        // If no quiz results, show mocked data
-                        quizResults.map(quiz => (
-                          <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="font-medium text-sm">{quiz.title}</span>
-                              <Badge className={`${
-                                quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                              }`}>
-                                {quiz.score}%
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {quiz.date} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
-                            </div>
-                          </div>
-                        ))
-                      )}
+                       : 
+                        // No quiz results for new users
+                        <div className="text-center py-6">
+                          <p className="text-gray-500 dark:text-gray-400">You haven't completed any quizzes yet.</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Start a quiz to track your progress!</p>
+                        </div>
+                      }
                     </div>
                   </CardContent>
                 </Card>
