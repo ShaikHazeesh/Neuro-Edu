@@ -332,65 +332,141 @@ const Dashboard = () => {
             </Card>
           </div>
           
-          {/* Quiz Results & Focus Game */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Quiz Results</CardTitle>
-                <CardDescription>
-                  See how you've performed
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {/* First check for actual user quiz results */}
-                  {userProgressData?.quizResults && userProgressData.quizResults.length > 0 ? (
-                    userProgressData.quizResults.slice(0, 3).map((quiz: any) => (
-                      <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-sm">{quiz.title}</span>
-                          <Badge className={`${
-                            quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                            quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {quiz.score}%
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(quiz.timestamp).toLocaleDateString()} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    // If no quiz results, show mocked data
-                    quizResults.map(quiz => (
-                      <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-sm">{quiz.title}</span>
-                          <Badge className={`${
-                            quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                            quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {quiz.score}%
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {quiz.date} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" size="sm" className="w-full">All Quiz Results</Button>
-              </CardFooter>
-            </Card>
-            
-            {/* Focus Game */}
+          {/* Focus Game Section */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-outfit font-semibold">Brain Break</h2>
+              <span className="text-sm text-gray-500">Take a quick coding break</span>
+            </div>
             <CodeBreakGame />
+          </div>
+          
+          {/* Quizzes Section */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-outfit font-semibold">Your Quizzes</h2>
+              <Button variant="link" className="text-primary">See All Quizzes</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              {/* Recent Quiz Results */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Recent Results</CardTitle>
+                    <CardDescription>
+                      See how you've performed
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {/* First check for actual user quiz results */}
+                      {userProgressData?.quizResults && userProgressData.quizResults.length > 0 ? (
+                        userProgressData.quizResults.slice(0, 3).map((quiz: any) => (
+                          <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-medium text-sm">{quiz.title}</span>
+                              <Badge className={`${
+                                quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {quiz.score}%
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(quiz.timestamp).toLocaleDateString()} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        // If no quiz results, show mocked data
+                        quizResults.map(quiz => (
+                          <div key={quiz.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-medium text-sm">{quiz.title}</span>
+                              <Badge className={`${
+                                quiz.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                quiz.score >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {quiz.score}%
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {quiz.date} • {Math.round(quiz.score / 100 * quiz.totalQuestions)}/{quiz.totalQuestions} questions
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Available Quizzes */}
+                <Card className="col-span-1">
+                  <CardHeader>
+                    <CardTitle>Available Quizzes</CardTitle>
+                    <CardDescription>
+                      Practice your skills with these quizzes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {loadingCourses ? (
+                        Array(3).fill(0).map((_, index) => (
+                          <Skeleton key={index} className="h-16 w-full" />
+                        ))
+                      ) : (
+                        courses && Array.isArray(courses) && courses.slice(0, 3).map((course: any, index: number) => (
+                          <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">{course.title} Quiz</p>
+                              <p className="text-xs text-gray-500">Test your knowledge in {course.level} concepts</p>
+                            </div>
+                            <Link to={`/quiz/${course.id}`}>
+                              <Button size="sm" variant="outline">Take Quiz</Button>
+                            </Link>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Performance Summary */}
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Quiz Performance Summary</CardTitle>
+                  <CardDescription>
+                    Your progress across all quizzes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-primary/10 rounded-lg p-4 text-center">
+                      <h3 className="text-2xl font-bold text-primary">
+                        {userProgressData?.stats?.quizzesPassed || 0}
+                      </h3>
+                      <p className="text-sm">Quizzes Passed</p>
+                    </div>
+                    <div className="bg-primary/10 rounded-lg p-4 text-center">
+                      <h3 className="text-2xl font-bold text-primary">
+                        {userProgressData?.stats?.averageScore || "0%"}
+                      </h3>
+                      <p className="text-sm">Average Score</p>
+                    </div>
+                    <div className="bg-primary/10 rounded-lg p-4 text-center">
+                      <h3 className="text-2xl font-bold text-primary">
+                        {userProgressData?.stats?.totalQuizzes || 0}
+                      </h3>
+                      <p className="text-sm">Total Quizzes Available</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
           
           {/* Mood & Progress Tracking */}
