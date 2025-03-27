@@ -27,19 +27,15 @@ const CourseDetail = () => {
         <nav className="flex mb-6" aria-label="Breadcrumb">
           <ol className="inline-flex items-center space-x-1 md:space-x-3">
             <li className="inline-flex items-center">
-              <Link href="/">
-                <a className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-accent">
-                  Home
-                </a>
+              <Link to="/" className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-accent">
+                Home
               </Link>
             </li>
             <li>
               <div className="flex items-center">
                 <span className="mx-2 text-gray-400">/</span>
-                <Link href="/courses">
-                  <a className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-accent">
-                    Courses
-                  </a>
+                <Link to="/courses" className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-accent">
+                  Courses
                 </Link>
               </div>
             </li>
@@ -66,10 +62,8 @@ const CourseDetail = () => {
             <p className="text-gray-600 dark:text-gray-300 mb-4">
               We couldn't load the course details. Please try again later.
             </p>
-            <Link href="/courses">
-              <a className="bg-primary text-white px-4 py-2 rounded-standard">
-                Return to Courses
-              </a>
+            <Link to="/courses" className="bg-primary text-white px-4 py-2 rounded-standard inline-block">
+              Return to Courses
             </Link>
           </div>
         ) : (

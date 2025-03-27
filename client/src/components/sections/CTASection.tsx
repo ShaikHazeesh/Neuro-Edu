@@ -33,15 +33,11 @@ const CTASection = () => {
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link href="/signup">
-                  <a className="bg-primary hover:bg-opacity-90 text-white px-6 py-3 rounded-standard font-medium transition-colors shadow-soft hover:shadow-md text-center">
-                    Get Started Free
-                  </a>
+                <Link to="/auth" className="bg-primary hover:bg-opacity-90 text-white px-6 py-3 rounded-standard font-medium transition-colors shadow-soft hover:shadow-md text-center inline-block">
+                  Get Started Free
                 </Link>
-                <Link href="/about">
-                  <a className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-textColor dark:text-darkText px-6 py-3 rounded-standard font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-center">
-                    Learn More
-                  </a>
+                <Link to="/courses" className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-textColor dark:text-darkText px-6 py-3 rounded-standard font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-center inline-block">
+                  Learn More
                 </Link>
               </div>
             </div>
