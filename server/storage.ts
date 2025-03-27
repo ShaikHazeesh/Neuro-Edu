@@ -779,5 +779,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Initialize database for the application
-export const storage = new DatabaseStorage();
+// Initialize memory storage for the application (fallback when database is not working)
+export const storage = new MemStorage();
