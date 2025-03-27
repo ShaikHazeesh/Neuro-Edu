@@ -1,0 +1,513 @@
+import {
+  users, User, InsertUser,
+  courses, Course, InsertCourse,
+  lessons, Lesson, InsertLesson,
+  modules, Module, InsertModule,
+  userProgress, UserProgress, InsertUserProgress,
+  quizzes, Quiz, InsertQuiz,
+  cheatSheets, CheatSheet, InsertCheatSheet,
+  forumPosts, ForumPost, InsertForumPost,
+  forumComments, ForumComment, InsertForumComment,
+  chatMessages, ChatMessage, InsertChatMessage,
+  moodEntries, MoodEntry, InsertMoodEntry
+} from "@shared/schema";
+
+export interface IStorage {
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  
+  // Course operations
+  getCourses(): Promise<Course[]>;
+  getCourse(id: number): Promise<Course | undefined>;
+  getCoursesByCategory(category: string): Promise<Course[]>;
+  getCoursesByLevel(level: string): Promise<Course[]>;
+  createCourse(course: InsertCourse): Promise<Course>;
+  
+  // Lesson operations
+  getLessonsByCourseId(courseId: number): Promise<Lesson[]>;
+  getLesson(id: number): Promise<Lesson | undefined>;
+  getFeaturedLesson(): Promise<Lesson | undefined>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+  
+  // Module operations
+  getModulesByCourseId(courseId: number): Promise<Module[]>;
+  createModule(module: InsertModule): Promise<Module>;
+  
+  // User progress operations
+  getUserProgress(userId: number, courseId: number): Promise<UserProgress | undefined>;
+  updateUserProgress(progress: InsertUserProgress): Promise<UserProgress>;
+  
+  // Quiz operations
+  getQuizzesByLessonId(lessonId: number): Promise<Quiz[]>;
+  getQuiz(id: number): Promise<Quiz | undefined>;
+  createQuiz(quiz: InsertQuiz): Promise<Quiz>;
+  
+  // Cheat sheet operations
+  getCheatSheets(): Promise<CheatSheet[]>;
+  getCheatSheet(id: number): Promise<CheatSheet | undefined>;
+  createCheatSheet(cheatSheet: InsertCheatSheet): Promise<CheatSheet>;
+  
+  // Forum operations
+  getForumPosts(): Promise<ForumPost[]>;
+  getForumPost(id: number): Promise<ForumPost | undefined>;
+  createForumPost(post: InsertForumPost): Promise<ForumPost>;
+  getPostComments(postId: number): Promise<ForumComment[]>;
+  createForumComment(comment: InsertForumComment): Promise<ForumComment>;
+  
+  // Chat operations
+  saveChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getUserChatHistory(userId: number): Promise<ChatMessage[]>;
+  
+  // Mood tracking operations
+  saveMoodEntry(entry: InsertMoodEntry): Promise<MoodEntry>;
+  getUserMoodEntries(userId: number): Promise<MoodEntry[]>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<number, User>;
+  private courses: Map<number, Course>;
+  private lessons: Map<number, Lesson>;
+  private modules: Map<number, Module>;
+  private userProgress: Map<string, UserProgress>; // key: userId-courseId
+  private quizzes: Map<number, Quiz>;
+  private cheatSheets: Map<number, CheatSheet>;
+  private forumPosts: Map<number, ForumPost>;
+  private forumComments: Map<number, ForumComment>;
+  private chatMessages: Map<number, ChatMessage>;
+  private moodEntries: Map<number, MoodEntry>;
+  
+  private userId: number = 1;
+  private courseId: number = 1;
+  private lessonId: number = 1;
+  private moduleId: number = 1;
+  private progressId: number = 1;
+  private quizId: number = 1;
+  private cheatSheetId: number = 1;
+  private forumPostId: number = 1;
+  private commentId: number = 1;
+  private chatMessageId: number = 1;
+  private moodEntryId: number = 1;
+
+  constructor() {
+    this.users = new Map();
+    this.courses = new Map();
+    this.lessons = new Map();
+    this.modules = new Map();
+    this.userProgress = new Map();
+    this.quizzes = new Map();
+    this.cheatSheets = new Map();
+    this.forumPosts = new Map();
+    this.forumComments = new Map();
+    this.chatMessages = new Map();
+    this.moodEntries = new Map();
+    
+    // Initialize with some data
+    this.initializeData();
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userId++;
+    const user: User = { ...insertUser, id, createdAt: new Date(), isAdmin: false };
+    this.users.set(id, user);
+    return user;
+  }
+  
+  // Course operations
+  async getCourses(): Promise<Course[]> {
+    return Array.from(this.courses.values());
+  }
+  
+  async getCourse(id: number): Promise<Course | undefined> {
+    return this.courses.get(id);
+  }
+  
+  async getCoursesByCategory(category: string): Promise<Course[]> {
+    return Array.from(this.courses.values()).filter(
+      course => course.category === category
+    );
+  }
+  
+  async getCoursesByLevel(level: string): Promise<Course[]> {
+    return Array.from(this.courses.values()).filter(
+      course => course.level === level
+    );
+  }
+  
+  async createCourse(insertCourse: InsertCourse): Promise<Course> {
+    const id = this.courseId++;
+    const course: Course = { ...insertCourse, id, createdAt: new Date() };
+    this.courses.set(id, course);
+    return course;
+  }
+  
+  // Lesson operations
+  async getLessonsByCourseId(courseId: number): Promise<Lesson[]> {
+    return Array.from(this.lessons.values())
+      .filter(lesson => lesson.courseId === courseId)
+      .sort((a, b) => a.order - b.order);
+  }
+  
+  async getLesson(id: number): Promise<Lesson | undefined> {
+    return this.lessons.get(id);
+  }
+  
+  async getFeaturedLesson(): Promise<Lesson | undefined> {
+    return Array.from(this.lessons.values()).find(
+      lesson => lesson.isFeatured
+    );
+  }
+  
+  async createLesson(insertLesson: InsertLesson): Promise<Lesson> {
+    const id = this.lessonId++;
+    const lesson: Lesson = { ...insertLesson, id };
+    this.lessons.set(id, lesson);
+    return lesson;
+  }
+  
+  // Module operations
+  async getModulesByCourseId(courseId: number): Promise<Module[]> {
+    return Array.from(this.modules.values())
+      .filter(module => module.courseId === courseId)
+      .sort((a, b) => a.order - b.order);
+  }
+  
+  async createModule(insertModule: InsertModule): Promise<Module> {
+    const id = this.moduleId++;
+    const module: Module = { ...insertModule, id };
+    this.modules.set(id, module);
+    return module;
+  }
+  
+  // User progress operations
+  async getUserProgress(userId: number, courseId: number): Promise<UserProgress | undefined> {
+    return this.userProgress.get(`${userId}-${courseId}`);
+  }
+  
+  async updateUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
+    const key = `${insertProgress.userId}-${insertProgress.courseId}`;
+    const existingProgress = this.userProgress.get(key);
+    
+    let progress: UserProgress;
+    if (existingProgress) {
+      progress = { 
+        ...existingProgress, 
+        ...insertProgress, 
+        lastAccessed: new Date() 
+      };
+    } else {
+      progress = { 
+        ...insertProgress, 
+        id: this.progressId++, 
+        lastAccessed: new Date() 
+      };
+    }
+    
+    this.userProgress.set(key, progress);
+    return progress;
+  }
+  
+  // Quiz operations
+  async getQuizzesByLessonId(lessonId: number): Promise<Quiz[]> {
+    return Array.from(this.quizzes.values()).filter(
+      quiz => quiz.lessonId === lessonId
+    );
+  }
+  
+  async getQuiz(id: number): Promise<Quiz | undefined> {
+    return this.quizzes.get(id);
+  }
+  
+  async createQuiz(insertQuiz: InsertQuiz): Promise<Quiz> {
+    const id = this.quizId++;
+    const quiz: Quiz = { ...insertQuiz, id };
+    this.quizzes.set(id, quiz);
+    return quiz;
+  }
+  
+  // Cheat sheet operations
+  async getCheatSheets(): Promise<CheatSheet[]> {
+    return Array.from(this.cheatSheets.values());
+  }
+  
+  async getCheatSheet(id: number): Promise<CheatSheet | undefined> {
+    return this.cheatSheets.get(id);
+  }
+  
+  async createCheatSheet(insertCheatSheet: InsertCheatSheet): Promise<CheatSheet> {
+    const id = this.cheatSheetId++;
+    const cheatSheet: CheatSheet = { ...insertCheatSheet, id };
+    this.cheatSheets.set(id, cheatSheet);
+    return cheatSheet;
+  }
+  
+  // Forum operations
+  async getForumPosts(): Promise<ForumPost[]> {
+    return Array.from(this.forumPosts.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async getForumPost(id: number): Promise<ForumPost | undefined> {
+    return this.forumPosts.get(id);
+  }
+  
+  async createForumPost(insertPost: InsertForumPost): Promise<ForumPost> {
+    const id = this.forumPostId++;
+    const now = new Date();
+    const post: ForumPost = { 
+      ...insertPost, 
+      id, 
+      createdAt: now, 
+      updatedAt: now, 
+      likes: 0
+    };
+    this.forumPosts.set(id, post);
+    return post;
+  }
+  
+  async getPostComments(postId: number): Promise<ForumComment[]> {
+    return Array.from(this.forumComments.values())
+      .filter(comment => comment.postId === postId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  async createForumComment(insertComment: InsertForumComment): Promise<ForumComment> {
+    const id = this.commentId++;
+    const now = new Date();
+    const comment: ForumComment = {
+      ...insertComment,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      likes: 0
+    };
+    this.forumComments.set(id, comment);
+    return comment;
+  }
+  
+  // Chat operations
+  async saveChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
+    const id = this.chatMessageId++;
+    const message: ChatMessage = {
+      ...insertMessage,
+      id,
+      createdAt: new Date()
+    };
+    this.chatMessages.set(id, message);
+    return message;
+  }
+  
+  async getUserChatHistory(userId: number): Promise<ChatMessage[]> {
+    return Array.from(this.chatMessages.values())
+      .filter(message => message.userId === userId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  // Mood tracking operations
+  async saveMoodEntry(insertEntry: InsertMoodEntry): Promise<MoodEntry> {
+    const id = this.moodEntryId++;
+    const entry: MoodEntry = {
+      ...insertEntry,
+      id,
+      createdAt: new Date()
+    };
+    this.moodEntries.set(id, entry);
+    return entry;
+  }
+  
+  async getUserMoodEntries(userId: number): Promise<MoodEntry[]> {
+    return Array.from(this.moodEntries.values())
+      .filter(entry => entry.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  // Initialize with sample data
+  private initializeData() {
+    // Add initial data for demonstration
+    // Courses
+    const pythonCourse: Course = {
+      id: this.courseId++,
+      title: "Python Fundamentals",
+      description: "Learn Python basics with mental health breaks built into the curriculum.",
+      imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+      level: "Beginner",
+      category: "Python",
+      duration: "8 weeks",
+      lectureCount: 24,
+      createdAt: new Date()
+    };
+    this.courses.set(pythonCourse.id, pythonCourse);
+    
+    const jsCourse: Course = {
+      id: this.courseId++,
+      title: "JavaScript Essentials",
+      description: "Master JavaScript with a focus on short, manageable learning sessions.",
+      imageUrl: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+      level: "Intermediate",
+      category: "JavaScript",
+      duration: "10 weeks",
+      lectureCount: 32,
+      createdAt: new Date()
+    };
+    this.courses.set(jsCourse.id, jsCourse);
+    
+    const webDevCourse: Course = {
+      id: this.courseId++,
+      title: "Responsive Web Design",
+      description: "Create beautiful websites with HTML/CSS while learning at your own pace.",
+      imageUrl: "https://images.unsplash.com/photo-1603322327561-7c47f9236e5e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+      level: "All Levels",
+      category: "Web Development",
+      duration: "6 weeks",
+      lectureCount: 18,
+      createdAt: new Date()
+    };
+    this.courses.set(webDevCourse.id, webDevCourse);
+    
+    // Featured lesson
+    const dataStructuresLesson: Lesson = {
+      id: this.lessonId++,
+      courseId: pythonCourse.id,
+      title: "Introduction to Data Structures",
+      description: "Learn the fundamentals of data structures and how they can be implemented in Python.",
+      videoUrl: "https://www.youtube.com/watch?v=_t2GVaQasRY",
+      thumbnailUrl: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+      tags: ["Data Structures", "Python", "Algorithms"],
+      duration: "14:20",
+      order: 1,
+      isFeatured: true
+    };
+    this.lessons.set(dataStructuresLesson.id, dataStructuresLesson);
+    
+    // Modules for the featured lesson
+    const modules = [
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Introduction",
+        order: 1
+      },
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Arrays & Lists",
+        order: 2
+      },
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Linked Lists",
+        order: 3
+      },
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Stacks & Queues",
+        order: 4
+      },
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Hash Tables",
+        order: 5
+      },
+      {
+        id: this.moduleId++,
+        courseId: pythonCourse.id,
+        title: "Trees & Graphs",
+        order: 6
+      }
+    ] as Module[];
+    
+    for (const module of modules) {
+      this.modules.set(module.id, module);
+    }
+    
+    // Cheat sheets
+    const cheatSheets = [
+      {
+        id: this.cheatSheetId++,
+        title: "Python Basics",
+        level: "Beginner",
+        topics: ["Variables & Data Types", "Control Flow (if/else)", "Loops (for, while)", "Functions & Parameters", "Lists & Dictionaries"],
+        downloadUrl: "/cheat-sheets/python-basics.pdf",
+        color: "primary"
+      },
+      {
+        id: this.cheatSheetId++,
+        title: "JavaScript Essentials",
+        level: "Intermediate",
+        topics: ["ES6 Syntax", "Arrow Functions", "Promises & Async/Await", "Array Methods", "DOM Manipulation"],
+        downloadUrl: "/cheat-sheets/javascript-essentials.pdf",
+        color: "secondary"
+      },
+      {
+        id: this.cheatSheetId++,
+        title: "CSS Grid & Flexbox",
+        level: "All Levels",
+        topics: ["Flexbox Container Properties", "Flexbox Item Properties", "Grid Container Setup", "Grid Placement", "Responsive Layouts"],
+        downloadUrl: "/cheat-sheets/css-grid-flexbox.pdf",
+        color: "accent"
+      }
+    ] as CheatSheet[];
+    
+    for (const cheatSheet of cheatSheets) {
+      this.cheatSheets.set(cheatSheet.id, cheatSheet);
+    }
+    
+    // Sample forum posts
+    const forumPosts = [
+      {
+        id: this.forumPostId++,
+        userId: 1,
+        title: "How to overcome imposter syndrome as a beginner programmer?",
+        content: "I've been learning to code for a few months now, but I still feel like I don't know enough. Any advice on dealing with imposter syndrome?",
+        tags: ["Mental Health", "Beginners", "Support"],
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        likes: 15,
+        anonymous: false
+      },
+      {
+        id: this.forumPostId++,
+        userId: 2,
+        title: "Strategies for maintaining focus during long coding sessions",
+        content: "I find it hard to maintain focus when coding for long periods. What techniques do you use to stay focused and productive?",
+        tags: ["Focus", "Productivity", "Mental Health"],
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+        updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        likes: 23,
+        anonymous: false
+      },
+      {
+        id: this.forumPostId++,
+        userId: 3,
+        title: "Feeling overwhelmed by JavaScript frameworks",
+        content: "There are so many JavaScript frameworks out there. How do you decide which one to learn without feeling overwhelmed?",
+        tags: ["JavaScript", "Frameworks", "Anxiety"],
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        updatedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+        likes: 19,
+        anonymous: true
+      }
+    ] as ForumPost[];
+    
+    for (const post of forumPosts) {
+      this.forumPosts.set(post.id, post);
+    }
+  }
+}
+
+export const storage = new MemStorage();
