@@ -15,7 +15,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import {
   Smile,
   Meh,
@@ -23,8 +23,10 @@ import {
   Calendar,
   CheckCircle,
   Loader2,
+  BarChart as BarChartIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from "recharts";
 
 type MoodEntry = {
   id: number;
@@ -129,9 +131,10 @@ const MoodJournal = () => {
           <Card>
             <CardHeader>
               <Tabs defaultValue="new" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="new">New Entry</TabsTrigger>
                   <TabsTrigger value="history">Entry History</TabsTrigger>
+                  <TabsTrigger value="analytics"><BarChartIcon className="h-4 w-4 mr-2" /> Analytics</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardHeader>
@@ -241,6 +244,178 @@ const MoodJournal = () => {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground mb-4">No mood entries yet</p>
+                    <Button variant="secondary" onClick={() => setActiveTab("new")}>
+                      Create Your First Entry
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </TabsContent>
+            
+            <TabsContent value="analytics" className="mt-0">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-medium mb-4">Mood Analytics</h2>
+                
+                {isLoadingEntries ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : moodEntries && moodEntries.length > 0 ? (
+                  <div className="space-y-8">
+                    {/* Mood Distribution */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Mood Distribution</h3>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
+                        {/* Pie Chart of mood distribution */}
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={(() => {
+                                const distribution = moodEntries.reduce((acc: Record<string, number>, entry) => {
+                                  acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                                  return acc;
+                                }, {});
+                                
+                                return Object.keys(distribution).map(mood => ({
+                                  name: mood,
+                                  value: distribution[mood]
+                                }));
+                              })()}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {moodOptions.map((option, index) => {
+                                const colors = {
+                                  "Good": "#4ade80", // green
+                                  "Okay": "#60a5fa", // blue
+                                  "Struggling": "#fb923c" // orange
+                                };
+                                // @ts-ignore - mood is a valid key
+                                const color = colors[option.value] || "#9ca3af";
+                                return <Cell key={`cell-${index}`} fill={color} />;
+                              })}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    
+                    {/* Mood Trends Over Time */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Mood Trends (Last 7 Days)</h3>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
+                        {/* Bar Chart of mood over time */}
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={(() => {
+                              // Get last 7 days
+                              const endDate = new Date();
+                              const startDate = subDays(endDate, 6);
+                              
+                              // Generate array of all dates in the interval
+                              const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+                              
+                              // Create data for chart
+                              return dateRange.map(date => {
+                                // Format date for comparison
+                                const dateStr = format(date, "yyyy-MM-dd");
+                                
+                                // Get mood entries for this date
+                                const dayEntries = entriesByDate[dateStr] || [];
+                                
+                                // Count moods
+                                const good = dayEntries.filter(e => e.mood === "Good").length;
+                                const okay = dayEntries.filter(e => e.mood === "Okay").length;
+                                const struggling = dayEntries.filter(e => e.mood === "Struggling").length;
+                                
+                                return {
+                                  date: format(date, "MM/dd"),
+                                  good,
+                                  okay,
+                                  struggling,
+                                  total: dayEntries.length
+                                };
+                              });
+                            })()}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="good" fill="#4ade80" name="Good" />
+                            <Bar dataKey="okay" fill="#60a5fa" name="Okay" />
+                            <Bar dataKey="struggling" fill="#fb923c" name="Struggling" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Entries</h4>
+                        <p className="text-3xl font-bold">{moodEntries.length}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Most Common Mood</h4>
+                        <p className="text-3xl font-bold">
+                          {(() => {
+                            const moodCounts = moodEntries.reduce((acc: Record<string, number>, entry) => {
+                              acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                              return acc;
+                            }, {});
+                            
+                            let maxMood = "";
+                            let maxCount = 0;
+                            
+                            Object.entries(moodCounts).forEach(([mood, count]) => {
+                              if (count > maxCount) {
+                                maxMood = mood;
+                                maxCount = count;
+                              }
+                            });
+                            
+                            return maxMood;
+                          })()}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Streak</h4>
+                        <p className="text-3xl font-bold">
+                          {(() => {
+                            const today = format(new Date(), "yyyy-MM-dd");
+                            const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
+                            
+                            // If no entry today, streak is 0
+                            if (!entriesByDate[today]) return 0;
+                            
+                            // Otherwise count consecutive days with entries
+                            let streak = 1;
+                            let currentDate = yesterday;
+                            
+                            while (entriesByDate[currentDate]) {
+                              streak++;
+                              currentDate = format(subDays(new Date(currentDate), 1), "yyyy-MM-dd");
+                            }
+                            
+                            return streak;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4">No mood data to analyze yet</p>
                     <Button variant="secondary" onClick={() => setActiveTab("new")}>
                       Create Your First Entry
                     </Button>
