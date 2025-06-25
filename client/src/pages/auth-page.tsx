@@ -68,8 +68,24 @@ const AuthPage = () => {
   }
 
   function onRegisterSubmit(values: z.infer<typeof registerSchema>) {
-    const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData);
+    try {
+      console.log("Register form submitted with values:", values);
+      const { confirmPassword, ...registerData } = values;
+      console.log("Sending registration data:", registerData);
+      registerMutation.mutate(registerData, {
+        onSuccess: () => {
+          console.log("Registration success callback reached");
+          // Registration successful, navigate to dashboard
+          navigate("/dashboard");
+        },
+        onError: (error) => {
+          console.error("Registration error in component:", error);
+          // Error is handled by the mutation already
+        }
+      });
+    } catch (error) {
+      console.error("Unexpected error in registration form submit:", error);
+    }
   }
 
   if (isLoading) {
@@ -85,14 +101,14 @@ const AuthPage = () => {
       {/* Left side - auth form */}
       <div className="w-full md:w-1/2 p-8 flex items-center justify-center">
         <div className="w-full max-w-md">
-          <h1 className="text-3xl font-bold mb-8 text-center text-primary">LearningMindful</h1>
-          
+          <h1 className="text-3xl font-bold mb-8 text-center text-primary">Neuro Edu</h1>
+
           <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <Card>
                 <CardHeader>
@@ -130,9 +146,9 @@ const AuthPage = () => {
                           </FormItem>
                         )}
                       />
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
+                      <Button
+                        type="submit"
+                        className="w-full"
                         disabled={loginMutation.isPending}
                       >
                         {loginMutation.isPending ? (
@@ -147,17 +163,22 @@ const AuthPage = () => {
                     </form>
                   </Form>
                 </CardContent>
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex flex-col items-center space-y-2">
                   <p className="text-sm text-muted-foreground">
                     Don't have an account?{" "}
                     <Button variant="link" className="p-0" onClick={() => setActiveTab("register")}>
                       Register here
                     </Button>
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    <a href="http://localhost:8080/" target="_blank" className="text-primary hover:underline">
+                      Admin click here
+                    </a>
+                  </p>
                 </CardFooter>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="register">
               <Card>
                 <CardHeader>
@@ -221,9 +242,9 @@ const AuthPage = () => {
                           </FormItem>
                         )}
                       />
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
+                      <Button
+                        type="submit"
+                        className="w-full"
                         disabled={registerMutation.isPending}
                       >
                         {registerMutation.isPending ? (
@@ -235,6 +256,11 @@ const AuthPage = () => {
                           "Register"
                         )}
                       </Button>
+                      {registerMutation.isError && (
+                        <div className="mt-2 text-sm text-red-500">
+                          {registerMutation.error instanceof Error ? registerMutation.error.message : "Registration failed"}
+                        </div>
+                      )}
                     </form>
                   </Form>
                 </CardContent>
@@ -251,13 +277,13 @@ const AuthPage = () => {
           </Tabs>
         </div>
       </div>
-      
+
       {/* Right side - hero section */}
       <div className="w-full md:w-1/2 bg-gradient-to-br from-primary/80 to-primary p-8 flex items-center justify-center hidden md:flex">
         <div className="max-w-md text-white">
           <h2 className="text-4xl font-bold mb-6">Learn. Grow. Thrive.</h2>
           <p className="text-lg mb-8">
-            LearningMindful combines programming education with mental health support to help students succeed academically and personally.
+            Neuro Edu combines programming education with mental health support to help students succeed academically and personally.
           </p>
           <div className="space-y-4">
             <div className="flex items-start">

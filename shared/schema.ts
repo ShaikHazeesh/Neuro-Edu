@@ -1,18 +1,19 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, blob } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // User model
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
   fullName: text("full_name"),
   avatarUrl: text("avatar_url"),
-  createdAt: timestamp("created_at").defaultNow(),
-  isAdmin: boolean("is_admin").default(false),
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
+  streak: integer("streak").default(0),
+  lastStreak: text("last_streak"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -22,6 +23,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   forumComments: many(forumComments),
   chatMessages: many(chatMessages),
   moodEntries: many(moodEntries),
+  completedLessons: many(completedLessons), // New relation for tracking completed lessons
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -35,8 +37,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 // Course model
-export const courses = pgTable("courses", {
-  id: serial("id").primaryKey(),
+export const courses = sqliteTable("courses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
@@ -44,7 +46,7 @@ export const courses = pgTable("courses", {
   category: text("category").notNull(), // Web Development, Python, JavaScript, etc.
   duration: text("duration").notNull(), // e.g. "8 weeks"
   lectureCount: integer("lecture_count").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
 });
 
 export const coursesRelations = relations(courses, ({ many }) => ({
@@ -64,17 +66,18 @@ export const insertCourseSchema = createInsertSchema(courses).pick({
 });
 
 // Lesson model
-export const lessons = pgTable("lessons", {
-  id: serial("id").primaryKey(),
+export const lessons = sqliteTable("lessons", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   courseId: integer("course_id").notNull().references(() => courses.id),
+  moduleId: integer("module_id").references(() => modules.id), // Reference to module
   title: text("title").notNull(),
   description: text("description").notNull(),
   videoUrl: text("video_url").notNull(),
   thumbnailUrl: text("thumbnail_url").notNull(),
-  tags: text("tags").array(),
+  tags: text("tags"), // SQLite doesn't support arrays, store as JSON string
   duration: text("duration").notNull(), // e.g. "10:45"
   order: integer("order").notNull(),
-  isFeatured: boolean("is_featured").default(false),
+  isFeatured: integer("is_featured", { mode: "boolean" }).default(false),
 });
 
 export const lessonsRelations = relations(lessons, ({ one, many }) => ({
@@ -82,12 +85,18 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
     fields: [lessons.courseId],
     references: [courses.id],
   }),
+  module: one(modules, {
+    fields: [lessons.moduleId],
+    references: [modules.id],
+  }),
   quizzes: many(quizzes),
   userProgress: many(userProgress),
+  completedBy: many(completedLessons),
 }));
 
 export const insertLessonSchema = createInsertSchema(lessons).pick({
   courseId: true,
+  moduleId: true,
   title: true,
   description: true,
   videoUrl: true,
@@ -99,18 +108,19 @@ export const insertLessonSchema = createInsertSchema(lessons).pick({
 });
 
 // Module model for organizing lessons
-export const modules = pgTable("modules", {
-  id: serial("id").primaryKey(),
+export const modules = sqliteTable("modules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   courseId: integer("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   order: integer("order").notNull(),
 });
 
-export const modulesRelations = relations(modules, ({ one }) => ({
+export const modulesRelations = relations(modules, ({ one, many }) => ({
   course: one(courses, {
     fields: [modules.courseId],
     references: [courses.id],
   }),
+  lessons: many(lessons),
 }));
 
 export const insertModuleSchema = createInsertSchema(modules).pick({
@@ -120,14 +130,14 @@ export const insertModuleSchema = createInsertSchema(modules).pick({
 });
 
 // User progress tracking
-export const userProgress = pgTable("user_progress", {
-  id: serial("id").primaryKey(),
+export const userProgress = sqliteTable("user_progress", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   courseId: integer("course_id").notNull().references(() => courses.id),
   lessonId: integer("lesson_id").references(() => lessons.id),
   progress: integer("progress").default(0), // Percentage of completion
-  lastAccessed: timestamp("last_accessed").defaultNow(),
-  completed: boolean("completed").default(false),
+  lastAccessed: text("last_accessed").notNull().default(String(new Date().toISOString())),
+  completed: integer("completed", { mode: "boolean" }).default(false),
   quizzesPassed: integer("quizzes_passed").default(0),
   completedLessons: integer("completed_lessons").default(0),
 });
@@ -155,16 +165,56 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).pick({
   completed: true,
   quizzesPassed: true,
   completedLessons: true,
+  lastAccessed: true,
+});
+
+// NEW: Completed lessons tracking table
+export const completedLessons = sqliteTable("completed_lessons", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  moduleId: integer("module_id").references(() => modules.id),
+  completedAt: text("completed_at").notNull().default(String(new Date().toISOString())),
+  watchProgress: integer("watch_progress").default(0), // Percentage of video watched
+});
+
+export const completedLessonsRelations = relations(completedLessons, ({ one }) => ({
+  user: one(users, {
+    fields: [completedLessons.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [completedLessons.lessonId],
+    references: [lessons.id],
+  }),
+  course: one(courses, {
+    fields: [completedLessons.courseId],
+    references: [courses.id],
+  }),
+  module: one(modules, {
+    fields: [completedLessons.moduleId],
+    references: [modules.id],
+  }),
+}));
+
+export const insertCompletedLessonSchema = createInsertSchema(completedLessons).pick({
+  userId: true,
+  lessonId: true,
+  courseId: true,
+  moduleId: true,
+  completedAt: true,
+  watchProgress: true,
 });
 
 // Quiz model
-export const quizzes = pgTable("quizzes", {
-  id: serial("id").primaryKey(),
+export const quizzes = sqliteTable("quizzes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   lessonId: integer("lesson_id").notNull().references(() => lessons.id),
   courseId: integer("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   description: text("description"),
-  questions: json("questions").notNull(), // JSON array of quiz questions
+  questions: text("questions").notNull(), // JSON string in SQLite
   passingScore: integer("passing_score").default(70),
 });
 
@@ -189,11 +239,11 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
 });
 
 // Cheat sheet model
-export const cheatSheets = pgTable("cheat_sheets", {
-  id: serial("id").primaryKey(),
+export const cheatSheets = sqliteTable("cheat_sheets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   level: text("level").notNull(), // Beginner, Intermediate, Advanced, All Levels
-  topics: text("topics").array().notNull(),
+  topics: text("topics"), // Store as JSON string
   downloadUrl: text("download_url").notNull(),
   color: text("color").notNull(), // primary, secondary, accent
 });
@@ -207,16 +257,16 @@ export const insertCheatSheetSchema = createInsertSchema(cheatSheets).pick({
 });
 
 // Community forum posts
-export const forumPosts = pgTable("forum_posts", {
-  id: serial("id").primaryKey(),
+export const forumPosts = sqliteTable("forum_posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  tags: text("tags").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  tags: text("tags"), // Store as JSON string
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
+  updatedAt: text("updated_at").notNull().default(String(new Date().toISOString())),
   likes: integer("likes").default(0),
-  anonymous: boolean("anonymous").default(false),
+  anonymous: integer("anonymous", { mode: "boolean" }).default(false),
 });
 
 export const forumPostsRelations = relations(forumPosts, ({ one, many }) => ({
@@ -236,15 +286,15 @@ export const insertForumPostSchema = createInsertSchema(forumPosts).pick({
 });
 
 // Forum comments
-export const forumComments = pgTable("forum_comments", {
-  id: serial("id").primaryKey(),
+export const forumComments = sqliteTable("forum_comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   postId: integer("post_id").notNull().references(() => forumPosts.id),
   userId: integer("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
+  updatedAt: text("updated_at").notNull().default(String(new Date().toISOString())),
   likes: integer("likes").default(0),
-  anonymous: boolean("anonymous").default(false),
+  anonymous: integer("anonymous", { mode: "boolean" }).default(false),
 });
 
 export const forumCommentsRelations = relations(forumComments, ({ one }) => ({
@@ -266,12 +316,12 @@ export const insertForumCommentSchema = createInsertSchema(forumComments).pick({
 });
 
 // Chat message history
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
+export const chatMessages = sqliteTable("chat_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   message: text("message").notNull(),
   response: text("response").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
 });
 
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
@@ -289,12 +339,12 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
 });
 
 // Mood tracking
-export const moodEntries = pgTable("mood_entries", {
-  id: serial("id").primaryKey(),
+export const moodEntries = sqliteTable("mood_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   mood: text("mood").notNull(), // Good, Okay, Struggling
   journal: text("journal"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
 });
 
 export const moodEntriesRelations = relations(moodEntries, ({ one }) => ({
@@ -308,6 +358,73 @@ export const insertMoodEntrySchema = createInsertSchema(moodEntries).pick({
   userId: true,
   mood: true,
   journal: true,
+});
+
+// Quiz results to track completed quizzes
+export const quizResults = sqliteTable("quiz_results", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  quizId: integer("quiz_id").notNull().references(() => quizzes.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  score: integer("score").notNull(),
+  passed: integer("passed", { mode: "boolean" }).notNull(),
+  answers: text("answers"), // Store as JSON string
+  timeTaken: integer("time_taken"), // Time taken in seconds
+  createdAt: text("created_at").notNull().default(String(new Date().toISOString())),
+});
+
+export const quizResultsRelations = relations(quizResults, ({ one }) => ({
+  user: one(users, {
+    fields: [quizResults.userId],
+    references: [users.id],
+  }),
+  quiz: one(quizzes, {
+    fields: [quizResults.quizId],
+    references: [quizzes.id],
+  }),
+  course: one(courses, {
+    fields: [quizResults.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const insertQuizResultSchema = createInsertSchema(quizResults).pick({
+  userId: true,
+  quizId: true,
+  courseId: true,
+  score: true,
+  passed: true,
+  answers: true,
+  timeTaken: true,
+});
+
+// User activity tracking
+export const userActivity = sqliteTable("user_activity", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // 'quiz', 'lesson', 'mood', 'breathing', 'timeSpent'
+  message: text("message").notNull(),
+  timestamp: text("timestamp").notNull().default(String(new Date().toISOString())),
+  relatedId: integer("related_id").default(0), // ID of related entity (quiz, lesson, etc.)
+  duration: integer("duration"), // For timeSpent activities (in seconds)
+  activityType: text("activity_type"), // 'study' or 'mental'
+});
+
+export const userActivityRelations = relations(userActivity, ({ one }) => ({
+  user: one(users, {
+    fields: [userActivity.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertUserActivitySchema = createInsertSchema(userActivity).pick({
+  userId: true,
+  type: true,
+  message: true,
+  timestamp: true,
+  relatedId: true,
+  duration: true,
+  activityType: true,
 });
 
 // Type definitions
@@ -326,6 +443,14 @@ export type InsertModule = z.infer<typeof insertModuleSchema>;
 export type UserProgress = typeof userProgress.$inferSelect;
 export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 
+export type CompletedLesson = typeof completedLessons.$inferSelect;
+export type InsertCompletedLesson = z.infer<typeof insertCompletedLessonSchema>;
+
+// Custom type that extends UserProgress to support Date objects
+export interface UserProgressWithDate extends Omit<UserProgress, 'lastAccessed'> {
+  lastAccessed: string | Date;
+}
+
 export type Quiz = typeof quizzes.$inferSelect;
 export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 
@@ -343,3 +468,9 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 
 export type MoodEntry = typeof moodEntries.$inferSelect;
 export type InsertMoodEntry = z.infer<typeof insertMoodEntrySchema>;
+
+export type QuizResult = typeof quizResults.$inferSelect;
+export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
+
+export type UserActivity = typeof userActivity.$inferSelect;
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;

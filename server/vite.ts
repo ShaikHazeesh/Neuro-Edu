@@ -23,10 +23,21 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const apiPort = process.env.PORT || 5000;
+  
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    allowedHosts: true as true,
+    server: {
+      proxy: {
+        '/api': {
+          target: `http://localhost:${apiPort}`,
+          changeOrigin: true,
+          secure: false,
+        }
+      }
+    }
   };
 
   const vite = await createViteServer({
@@ -43,9 +54,27 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  // Log all requests to track what's happening
+  app.use((req, res, next) => {
+    console.log(`[VITE] ${req.method} ${req.url}`);
+    next();
+  });
+
   app.use(vite.middlewares);
+
+  // Add a special handler for API routes to make sure they're properly proxied
+  app.use('/api/*', (req, res, next) => {
+    console.log(`[API] Proxying request: ${req.method} ${req.url}`);
+    next();
+  });
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+    
+    // Don't process API routes here
+    if (url.startsWith('/api')) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, User, BookOpen, Award, SmilePlus, BrainCircuit } from "lucide-react";
+import { Loader2, User, BookOpen, Award, SmilePlus, BrainCircuit, Flame } from "lucide-react";
 import MainLayout from "@/components/layouts/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -124,11 +124,15 @@ const ProfilePage = () => {
                   </div>
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 mr-2 text-primary" />
-                    <span className="text-sm">Courses: {isProgressLoading ? "Loading..." : userProgress?.courseCount || 0}</span>
+                    <span className="text-sm">Courses: {isProgressLoading ? "Loading..." : userProgress?.stats?.courseCount || 0}</span>
                   </div>
                   <div className="flex items-center">
                     <Award className="h-5 w-5 mr-2 text-primary" />
-                    <span className="text-sm">Completed Lessons: {isProgressLoading ? "Loading..." : userProgress?.completedLessons || 0}</span>
+                    <span className="text-sm">Completed Lessons: {isProgressLoading ? "Loading..." : userProgress?.stats?.totalLessons || 0}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Flame className="h-5 w-5 mr-2 text-primary" />
+                    <span className="text-sm">Current Streak: {isProgressLoading ? "Loading..." : userProgress?.stats?.streak || 0} days</span>
                   </div>
                   <div className="flex items-center">
                     <SmilePlus className="h-5 w-5 mr-2 text-primary" />
@@ -280,7 +284,7 @@ const ProfilePage = () => {
                               </CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <p className="text-3xl font-bold">{userProgress?.courseCount || 0}</p>
+                              <p className="text-3xl font-bold">{userProgress?.stats?.courseCount || 0}</p>
                               <p className="text-sm text-muted-foreground">Total courses enrolled</p>
                             </CardContent>
                           </Card>
@@ -293,7 +297,7 @@ const ProfilePage = () => {
                               </CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <p className="text-3xl font-bold">{userProgress?.completedLessons || 0}</p>
+                              <p className="text-3xl font-bold">{userProgress?.stats?.totalLessons || 0}</p>
                               <p className="text-sm text-muted-foreground">Lessons completed</p>
                             </CardContent>
                           </Card>
@@ -306,7 +310,7 @@ const ProfilePage = () => {
                               </CardTitle>
                             </CardHeader>
                             <CardContent>
-                              <p className="text-3xl font-bold">{userProgress?.quizzesPassed || 0}</p>
+                              <p className="text-3xl font-bold">{userProgress?.stats?.quizzesPassed || 0}</p>
                               <p className="text-sm text-muted-foreground">Quizzes passed</p>
                             </CardContent>
                           </Card>

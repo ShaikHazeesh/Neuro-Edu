@@ -3,38 +3,38 @@ import { motion } from "framer-motion";
 const features = [
   {
     icon: "code",
-    title: "Interactive Coding",
-    description: "Learn programming through video lectures and hands-on exercises designed to build your skills gradually.",
+    title: "Structured Learning Paths",
+    description: "Progressive programming courses with clear learning paths designed specifically for beginners to advanced coders.",
     color: "primary"
   },
   {
     icon: "psychology",
-    title: "Mental Wellness",
-    description: "Access tools like guided breathing exercises, mood tracking, and support forums whenever you need them.",
+    title: "Mental Wellness Integration",
+    description: "Mindfulness exercises, stress management tools, and mood tracking built directly into your learning experience.",
     color: "secondary"
   },
   {
     icon: "smart_toy",
-    title: "AI Learning Assistant",
-    description: "Get personalized help with coding problems and mental health resources through our supportive AI chatbot.",
+    title: "Personalized Learning",
+    description: "Adaptive learning algorithms that adjust to your pace, learning style, and mental state to optimize your education.",
     color: "accent"
   },
   {
     icon: "school",
-    title: "Self-Paced Learning",
-    description: "Take courses at your own speed with no pressure, and easily pick up where you left off when you're ready.",
+    title: "Flexible Scheduling",
+    description: "Set your own learning schedule with no deadlines or pressure, ideal for managing study alongside other responsibilities.",
     color: "primary"
   },
   {
     icon: "forum",
     title: "Supportive Community",
-    description: "Connect with peers who understand both the challenges of learning to code and managing mental health.",
+    description: "Connect with peers who understand both coding challenges and mental health management in our moderated forums.",
     color: "secondary"
   },
   {
     icon: "auto_awesome",
-    title: "Quick Reference",
-    description: "Access cheat sheets and quick reference guides to reinforce concepts without overwhelming study sessions.",
+    title: "Progress Tracking",
+    description: "Visualize both your academic progress and wellbeing metrics to see how they correlate and improve over time.",
     color: "accent"
   }
 ];

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="225" viewBox="0 0 400 225" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="225" fill="#FFDEE2"/>
+  <path d="M150,112.5 C150,80 200,80 200,112.5 C200,145 250,145 250,112.5" 
+        stroke="#FF4D6A" stroke-width="8" fill="none">
+    <animate attributeName="d" 
+             values="M150,112.5 C150,80 200,80 200,112.5 C200,145 250,145 250,112.5;
+                     M150,100 C150,120 200,120 200,100 C200,80 250,80 250,100;
+                     M150,112.5 C150,80 200,80 200,112.5 C200,145 250,145 250,112.5" 
+             dur="4s" repeatCount="indefinite"/>
+  </path>
+  <text x="200" y="200" font-family="Arial" font-size="16" fill="#FF4D6A" text-anchor="middle">Progressive Relaxation</text>
+</svg> 

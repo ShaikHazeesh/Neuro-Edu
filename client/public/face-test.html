@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Detection Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      position: relative;
+      margin: 20px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    video {
+      border: 1px solid #ccc;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 640px;
+      height: 150px;
+      overflow-y: auto;
+      font-family: monospace;
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Face Detection Test</h1>
+  <div class="container">
+    <video id="video" width="640" height="480" autoplay muted></video>
+    <canvas id="overlay" width="640" height="480"></canvas>
+  </div>
+  <div class="controls">
+    <button id="start">Start Camera</button>
+    <button id="stop">Stop Camera</button>
+    <button id="load-models">Load Models</button>
+    <button id="test-detection">Test Detection</button>
+  </div>
+  <div class="status" id="status"></div>
+
+  <script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const statusDiv = document.getElementById('status');
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const loadModelsBtn = document.getElementById('load-models');
+    const testDetectionBtn = document.getElementById('test-detection');
+    
+    let stream = null;
+    let detectionInterval = null;
+    
+    function log(message) {
+      const now = new Date().toLocaleTimeString();
+      statusDiv.innerHTML += `[${now}] ${message}<br>`;
+      statusDiv.scrollTop = statusDiv.scrollHeight;
+    }
+    
+    // Load models
+    async function loadModels() {
+      log('Loading models...');
+      
+      try {
+        // Try different model locations
+        const modelLocations = [
+          '/models',
+          'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights',
+          'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model',
+          'https://unpkg.com/face-api.js/weights'
+        ];
+        
+        let loaded = false;
+        
+        for (const location of modelLocations) {
+          try {
+            log(`Trying to load from: ${location}`);
+            await Promise.all([
+              faceapi.nets.tinyFaceDetector.loadFromUri(location),
+              faceapi.nets.faceLandmark68Net.loadFromUri(location),
+              faceapi.nets.faceExpressionNet.loadFromUri(location)
+            ]);
+            log(`Successfully loaded models from: ${location}`);
+            loaded = true;
+            break;
+          } catch (err) {
+            log(`Failed to load from ${location}: ${err.message}`);
+          }
+        }
+        
+        if (!loaded) {
+          log('Failed to load models from all locations');
+        } else {
+          log('All models loaded successfully!');
+        }
+      } catch (err) {
+        log(`Error loading models: ${err.message}`);
+      }
+    }
+    
+    // Start camera
+    async function startCamera() {
+      try {
+        log('Starting camera...');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: 640,
+            height: 480,
+            facingMode: 'user'
+          }
+        });
+        
+        video.srcObject = stream;
+        log('Camera started successfully');
+      } catch (err) {
+        log(`Error starting camera: ${err.message}`);
+      }
+    }
+    
+    // Stop camera
+    function stopCamera() {
+      if (stream) {
+        log('Stopping camera...');
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+        stream = null;
+        log('Camera stopped');
+      }
+      
+      if (detectionInterval) {
+        clearInterval(detectionInterval);
+        detectionInterval = null;
+        log('Detection stopped');
+      }
+    }
+    
+    // Test face detection
+    async function testDetection() {
+      if (!stream) {
+        log('Please start the camera first');
+        return;
+      }
+      
+      log('Testing face detection...');
+      
+      try {
+        // Check if models are loaded
+        if (!faceapi.nets.tinyFaceDetector.isLoaded) {
+          log('Models are not loaded. Loading now...');
+          await loadModels();
+        }
+        
+        // Single detection test
+        const result = await faceapi.detectSingleFace(
+          video, 
+          new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.3 })
+        ).withFaceLandmarks().withFaceExpressions();
+        
+        if (result) {
+          log(`Face detected! Score: ${result.detection.score.toFixed(2)}`);
+          
+          // Get dominant expression
+          const expressions = result.expressions;
+          const dominantExpression = Object.entries(expressions)
+            .sort((a, b) => b[1] - a[1])[0];
+          
+          log(`Dominant expression: ${dominantExpression[0]} (${(dominantExpression[1] * 100).toFixed(0)}%)`);
+          
+          // Draw results
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          
+          // Draw detection box
+          const box = result.detection.box;
+          ctx.strokeStyle = 'green';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, box.y, box.width, box.height);
+          
+          // Draw text
+          ctx.font = '16px Arial';
+          ctx.fillStyle = 'red';
+          ctx.fillText(`${dominantExpression[0]} (${(dominantExpression[1] * 100).toFixed(0)}%)`, box.x, box.y - 5);
+          
+          // Start continuous detection
+          if (!detectionInterval) {
+            log('Starting continuous detection...');
+            detectionInterval = setInterval(detectFaces, 100);
+          }
+        } else {
+          log('No face detected');
+        }
+      } catch (err) {
+        log(`Detection error: ${err.message}`);
+      }
+    }
+    
+    // Continuous face detection
+    async function detectFaces() {
+      try {
+        const result = await faceapi.detectSingleFace(
+          video, 
+          new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.3 })
+        ).withFaceLandmarks().withFaceExpressions();
+        
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        
+        if (result) {
+          // Draw detection box
+          const box = result.detection.box;
+          ctx.strokeStyle = 'green';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, box.y, box.width, box.height);
+          
+          // Draw landmarks
+          const landmarks = result.landmarks.positions;
+          ctx.fillStyle = 'blue';
+          landmarks.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
+            ctx.fill();
+          });
+          
+          // Get dominant expression
+          const expressions = result.expressions;
+          const dominantExpression = Object.entries(expressions)
+            .sort((a, b) => b[1] - a[1])[0];
+          
+          // Draw text
+          ctx.font = '16px Arial';
+          ctx.fillStyle = 'red';
+          ctx.fillText(`${dominantExpression[0]} (${(dominantExpression[1] * 100).toFixed(0)}%)`, box.x, box.y - 5);
+        }
+      } catch (err) {
+        console.error('Detection error:', err);
+      }
+    }
+    
+    // Event listeners
+    startBtn.addEventListener('click', startCamera);
+    stopBtn.addEventListener('click', stopCamera);
+    loadModelsBtn.addEventListener('click', loadModels);
+    testDetectionBtn.addEventListener('click', testDetection);
+    
+    // Initial log
+    log('Face Detection Test Page Loaded');
+    log('Click "Load Models" to load the face detection models');
+    log('Click "Start Camera" to start your webcam');
+    log('Click "Test Detection" to test face detection');
+  </script>
+</body>
+</html>

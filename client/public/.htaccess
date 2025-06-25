@@ -1,0 +1,13 @@
+# Set correct MIME types for model files
+<FilesMatch ".*-shard.*$">
+  ForceType application/octet-stream
+</FilesMatch>
+
+<FilesMatch ".*\.json$">
+  ForceType application/json
+</FilesMatch>
+
+# Allow cross-origin requests
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+</IfModule>

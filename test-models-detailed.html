@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face-API.js Model Test (Detailed)</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .log {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .source-option {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Face-API.js Model Test (Detailed)</h1>
+  <p>This page tests if the face-api.js models are being served correctly with detailed diagnostics.</p>
+
+  <div class="test-section">
+    <h2>Model Source Selection</h2>
+    <div class="source-option">
+      <input type="radio" id="local" name="modelSource" value="./models" checked>
+      <label for="local">Local (/models)</label>
+    </div>
+    <div class="source-option">
+      <input type="radio" id="server" name="modelSource" value="http://localhost:3001">
+      <label for="server">Model Server (http://localhost:3001)</label>
+    </div>
+    <div class="source-option">
+      <input type="radio" id="cdn" name="modelSource" value="http://justadudewhohacks.github.io/face-api.js/weights">
+      <label for="cdn">CDN (GitHub - HTTP)</label>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Individual Models</h2>
+    <button id="testTinyFace">Test TinyFaceDetector</button>
+    <button id="testSsdMobilenet">Test SSD MobileNet</button>
+    <button id="testFaceLandmark">Test Face Landmark</button>
+    <button id="testFaceExpression">Test Face Expression</button>
+    <button id="testAll">Test All Models</button>
+    <div id="modelResults" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Network Diagnostics</h2>
+    <button id="checkManifests">Check Manifest Files</button>
+    <button id="checkShards">Check Shard Files</button>
+    <div id="networkResults" class="log"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>MIME Type Diagnostics</h2>
+    <button id="checkMimeTypes">Check MIME Types</button>
+    <div id="mimeResults" class="log"></div>
+  </div>
+
+  <script>
+    const modelResultsEl = document.getElementById('modelResults');
+    const networkResultsEl = document.getElementById('networkResults');
+    const mimeResultsEl = document.getElementById('mimeResults');
+
+    function getSelectedModelPath() {
+      return document.querySelector('input[name="modelSource"]:checked').value;
+    }
+
+    function logModelResult(message, isError = false) {
+      const span = document.createElement('div');
+      span.textContent = message;
+      span.className = isError ? 'error' : 'success';
+      modelResultsEl.appendChild(span);
+      console.log(message);
+    }
+
+    function logNetworkResult(message, isError = false) {
+      const span = document.createElement('div');
+      span.textContent = message;
+      span.className = isError ? 'error' : 'success';
+      networkResultsEl.appendChild(span);
+      console.log(message);
+    }
+
+    function logMimeResult(message, isError = false) {
+      const span = document.createElement('div');
+      span.textContent = message;
+      span.className = isError ? 'error' : 'success';
+      mimeResultsEl.appendChild(span);
+      console.log(message);
+    }
+
+    async function testTinyFaceDetector() {
+      modelResultsEl.innerHTML = '';
+      const modelPath = getSelectedModelPath();
+      logModelResult(`Testing TinyFaceDetector model...`);
+      logModelResult(`Using models path: ${modelPath}`);
+
+      try {
+        await faceapi.nets.tinyFaceDetector.load(modelPath);
+        logModelResult(`✅ TinyFaceDetector model loaded successfully!`);
+        return true;
+      } catch (error) {
+        logModelResult(`❌ Error loading TinyFaceDetector model: ${error.message}`, true);
+        console.error(error);
+        return false;
+      }
+    }
+
+    async function testSsdMobilenet() {
+      const modelPath = getSelectedModelPath();
+      logModelResult(`Testing SSD MobileNet model...`);
+
+      try {
+        await faceapi.nets.ssdMobilenetv1.load(modelPath);
+        logModelResult(`✅ SSD MobileNet model loaded successfully!`);
+        return true;
+      } catch (error) {
+        logModelResult(`❌ Error loading SSD MobileNet model: ${error.message}`, true);
+        console.error(error);
+        return false;
+      }
+    }
+
+    async function testFaceLandmark() {
+      const modelPath = getSelectedModelPath();
+      logModelResult(`Testing Face Landmark model...`);
+
+      try {
+        await faceapi.nets.faceLandmark68.load(modelPath);
+        logModelResult(`✅ Face Landmark model loaded successfully!`);
+        return true;
+      } catch (error) {
+        logModelResult(`❌ Error loading Face Landmark model: ${error.message}`, true);
+        console.error(error);
+        return false;
+      }
+    }
+
+    async function testFaceExpression() {
+      const modelPath = getSelectedModelPath();
+      logModelResult(`Testing Face Expression model...`);
+
+      try {
+        await faceapi.nets.faceExpressionNet.load(modelPath);
+        logModelResult(`✅ Face Expression model loaded successfully!`);
+        return true;
+      } catch (error) {
+        logModelResult(`❌ Error loading Face Expression model: ${error.message}`, true);
+        console.error(error);
+        return false;
+      }
+    }
+
+    async function testAllModels() {
+      modelResultsEl.innerHTML = '';
+      const modelPath = getSelectedModelPath();
+      logModelResult(`Testing all models...`);
+      logModelResult(`Using models path: ${modelPath}`);
+
+      let allSuccess = true;
+
+      try {
+        await faceapi.nets.tinyFaceDetector.load(modelPath);
+        logModelResult(`✅ TinyFaceDetector model loaded successfully!`);
+      } catch (error) {
+        logModelResult(`❌ Error loading TinyFaceDetector model: ${error.message}`, true);
+        console.error(error);
+        allSuccess = false;
+      }
+
+      try {
+        await faceapi.nets.ssdMobilenetv1.load(modelPath);
+        logModelResult(`✅ SSD MobileNet model loaded successfully!`);
+      } catch (error) {
+        logModelResult(`❌ Error loading SSD MobileNet model: ${error.message}`, true);
+        console.error(error);
+        allSuccess = false;
+      }
+
+      try {
+        await faceapi.nets.faceLandmark68.load(modelPath);
+        logModelResult(`✅ Face Landmark model loaded successfully!`);
+      } catch (error) {
+        logModelResult(`❌ Error loading Face Landmark model: ${error.message}`, true);
+        console.error(error);
+        allSuccess = false;
+      }
+
+      try {
+        await faceapi.nets.faceExpressionNet.load(modelPath);
+        logModelResult(`✅ Face Expression model loaded successfully!`);
+      } catch (error) {
+        logModelResult(`❌ Error loading Face Expression model: ${error.message}`, true);
+        console.error(error);
+        allSuccess = false;
+      }
+
+      if (allSuccess) {
+        logModelResult(`✅ All models loaded successfully!`);
+      } else {
+        logModelResult(`❌ Some models failed to load.`, true);
+      }
+    }
+
+    async function checkManifests() {
+      networkResultsEl.innerHTML = '';
+      const modelPath = getSelectedModelPath();
+      const manifests = [
+        'tiny_face_detector_model-weights_manifest.json',
+        'ssd_mobilenetv1_model-weights_manifest.json',
+        'face_landmark_68_model-weights_manifest.json',
+        'face_expression_model-weights_manifest.json'
+      ];
+
+      logNetworkResult(`Checking manifest files at ${modelPath}...`);
+
+      for (const manifest of manifests) {
+        try {
+          const response = await fetch(`${modelPath}/${manifest}`);
+          if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            logNetworkResult(`✅ ${manifest} - Status: ${response.status}, Content-Type: ${contentType}`);
+
+            try {
+              const data = await response.json();
+              logNetworkResult(`  ✅ Valid JSON with ${data.length} entries`);
+            } catch (e) {
+              logNetworkResult(`  ❌ Invalid JSON format: ${e.message}`, true);
+            }
+          } else {
+            logNetworkResult(`❌ ${manifest} - Status: ${response.status} ${response.statusText}`, true);
+          }
+        } catch (error) {
+          logNetworkResult(`❌ Error fetching ${manifest}: ${error.message}`, true);
+        }
+      }
+    }
+
+    async function checkShards() {
+      networkResultsEl.innerHTML = '';
+      const modelPath = getSelectedModelPath();
+      const shards = [
+        'tiny_face_detector_model-shard1',
+        'ssd_mobilenetv1_model-shard1',
+        'ssd_mobilenetv1_model-shard2',
+        'face_landmark_68_model-shard1',
+        'face_expression_model-shard1'
+      ];
+
+      logNetworkResult(`Checking shard files at ${modelPath}...`);
+
+      for (const shard of shards) {
+        try {
+          const response = await fetch(`${modelPath}/${shard}`);
+          if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            const contentLength = response.headers.get('content-length');
+            logNetworkResult(`✅ ${shard} - Status: ${response.status}, Content-Type: ${contentType}, Size: ${contentLength} bytes`);
+          } else {
+            logNetworkResult(`❌ ${shard} - Status: ${response.status} ${response.statusText}`, true);
+          }
+        } catch (error) {
+          logNetworkResult(`❌ Error fetching ${shard}: ${error.message}`, true);
+        }
+      }
+    }
+
+    async function checkMimeTypes() {
+      mimeResultsEl.innerHTML = '';
+      const modelPath = getSelectedModelPath();
+      const files = [
+        'tiny_face_detector_model-weights_manifest.json',
+        'tiny_face_detector_model-shard1',
+        'ssd_mobilenetv1_model-weights_manifest.json',
+        'ssd_mobilenetv1_model-shard1',
+        'face_landmark_68_model-weights_manifest.json',
+        'face_landmark_68_model-shard1',
+        'face_expression_model-weights_manifest.json',
+        'face_expression_model-shard1'
+      ];
+
+      logMimeResult(`Checking MIME types at ${modelPath}...`);
+
+      for (const file of files) {
+        try {
+          const response = await fetch(`${modelPath}/${file}`);
+          if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            const isJson = file.endsWith('.json');
+            const isShard = file.includes('-shard');
+
+            let isCorrectType = false;
+            if (isJson && contentType.includes('application/json')) {
+              isCorrectType = true;
+            } else if (isShard && (
+              contentType.includes('application/octet-stream') ||
+              contentType.includes('application/x-binary') ||
+              contentType.includes('binary/octet-stream')
+            )) {
+              isCorrectType = true;
+            }
+
+            if (isCorrectType) {
+              logMimeResult(`✅ ${file} - Content-Type: ${contentType} (Correct)`);
+            } else {
+              logMimeResult(`❌ ${file} - Content-Type: ${contentType} (Incorrect)`, true);
+              if (isJson) {
+                logMimeResult(`  Expected: application/json`, true);
+              } else if (isShard) {
+                logMimeResult(`  Expected: application/octet-stream`, true);
+              }
+            }
+          } else {
+            logMimeResult(`❌ ${file} - Status: ${response.status} ${response.statusText}`, true);
+          }
+        } catch (error) {
+          logMimeResult(`❌ Error fetching ${file}: ${error.message}`, true);
+        }
+      }
+    }
+
+    document.getElementById('testTinyFace').addEventListener('click', testTinyFaceDetector);
+    document.getElementById('testSsdMobilenet').addEventListener('click', testSsdMobilenet);
+    document.getElementById('testFaceLandmark').addEventListener('click', testFaceLandmark);
+    document.getElementById('testFaceExpression').addEventListener('click', testFaceExpression);
+    document.getElementById('testAll').addEventListener('click', testAllModels);
+    document.getElementById('checkManifests').addEventListener('click', checkManifests);
+    document.getElementById('checkShards').addEventListener('click', checkShards);
+    document.getElementById('checkMimeTypes').addEventListener('click', checkMimeTypes);
+  </script>
+</body>
+</html>

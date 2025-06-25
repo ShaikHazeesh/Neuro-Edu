@@ -13,7 +13,11 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-export default function FloatingChatBot() {
+interface FloatingChatBotProps {
+  fullScreen?: boolean;
+}
+
+export default function FloatingChatBot({ fullScreen = false }: FloatingChatBotProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome-message",
@@ -108,10 +112,26 @@ export default function FloatingChatBot() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from AI');
+        const errorStatus = response.status;
+        let errorMessage = `Error: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          console.error('Error parsing error response:', jsonError);
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        throw new Error('Failed to parse the AI response');
+      }
       
       // Add AI response
       const botMessage: ChatMessage = {

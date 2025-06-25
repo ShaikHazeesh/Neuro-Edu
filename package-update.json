@@ -1,0 +1,13 @@
+{
+  "name": "update-course-image",
+  "version": "1.0.0",
+  "description": "Update course image in database",
+  "main": "update-course-image.js",
+  "type": "module",
+  "scripts": {
+    "update": "node update-course-image.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^8.0.0"
+  }
+}

@@ -5,21 +5,21 @@ const testimonials = [
     name: "Sarah L.",
     role: "Computer Science Student",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
-    quote: "The combination of mental health support alongside coding courses made a huge difference. I was able to learn at my own pace without feeling overwhelmed.",
+    quote: "Neuro Edu helped me overcome my programming anxiety. The structured courses break down complex concepts perfectly, and the breathing exercises help me stay calm during challenging assignments.",
     rating: 5
   },
   {
     name: "Michael J.",
     role: "Self-taught Developer",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
-    quote: "The AI assistant helped me through numerous coding roadblocks and gave me coping strategies when I felt stressed. It's like having a tutor and therapist in one!",
+    quote: "I tried learning programming on my own for years but would always hit a wall and give up. The flexible scheduling and progress tracking on Neuro Edu helped me stay motivated and finally complete my first certification.",
     rating: 4.5
   },
   {
     name: "Priya R.",
     role: "Career Changer",
     image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
-    quote: "The community forum helped me realize I wasn't alone in my struggles. The programming cheat sheets made complex concepts more digestible during high-stress periods.",
+    quote: "As someone with ADHD, traditional coding bootcamps were overwhelming. Neuro Edu's approach of integrating wellbeing with learning helps me pace myself and actually retain what I learn. The community support is invaluable.",
     rating: 5
   }
 ];
@@ -34,11 +34,11 @@ const Testimonials = () => {
             Hear from students who found success through our supportive approach to learning.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <motion.div 
-              key={index} 
+            <motion.div
+              key={index}
               className="bg-background dark:bg-darkBg p-6 rounded-standard shadow-soft"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -46,10 +46,10 @@ const Testimonials = () => {
               transition={{ delay: index * 0.1 }}
             >
               <div className="flex items-center mb-4">
-                <img 
-                  src={testimonial.image} 
-                  alt={testimonial.name} 
-                  className="w-12 h-12 rounded-full object-cover" 
+                <img
+                  src={testimonial.image}
+                  alt={testimonial.name}
+                  className="w-12 h-12 rounded-full object-cover"
                 />
                 <div className="ml-4">
                   <h3 className="font-outfit font-semibold">{testimonial.name}</h3>

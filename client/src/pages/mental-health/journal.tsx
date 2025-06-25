@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from "recharts";
+import { useActivityTracker } from '@/hooks/use-activity-tracker';
 
 type MoodEntry = {
   id: number;
@@ -49,30 +50,63 @@ const MoodJournal = () => {
   const [journalText, setJournalText] = useState("");
   const [activeTab, setActiveTab] = useState("new");
 
-  // Fetch mood entries
+  // Track mental health activity
+  useActivityTracker({ activityType: 'mental' });
+
+  // Fetch mood entries and user progress data
   const { data: moodEntries, isLoading: isLoadingEntries } = useQuery<MoodEntry[]>({
     queryKey: ["/api/mood"],
+    enabled: !!user,
+  });
+
+  const { data: userProgressData } = useQuery({
+    queryKey: ["/api/user/progress"],
     enabled: !!user,
   });
 
   // Save new mood entry
   const saveMoodMutation = useMutation({
     mutationFn: async (data: { mood: string; journal: string }) => {
-      const res = await apiRequest("POST", "/api/mood", data);
-      return await res.json();
+      console.log("Submitting mood data:", data);
+      try {
+        const res = await fetch('/api/mood', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        console.log("Mood API response status:", res.status);
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Mood API error:", errorData);
+          throw new Error(errorData.message || "Failed to save mood");
+        }
+        
+        const responseData = await res.json();
+        console.log("Mood saved response:", responseData);
+        return responseData;
+      } catch (error) {
+        console.error("Error in mood submission:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Mood saved successfully:", data);
       toast({
         title: "Mood saved",
-        description: "Your mood entry has been recorded",
+        description: `Your mood entry has been recorded. Current streak: ${data.streak} days`,
       });
       setSelectedMood(null);
       setJournalText("");
-      setActiveTab("history");
+      // Force refetch of mood entries and user progress
       queryClient.invalidateQueries({ queryKey: ["/api/mood"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/progress"] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Error saving mood:", error);
       toast({
         title: "Error saving mood",
         description: "There was a problem saving your mood entry",
@@ -81,20 +115,41 @@ const MoodJournal = () => {
     },
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedMood) {
       toast({
         title: "Please select a mood",
-        description: "Select how you're feeling today",
-        variant: "destructive",
+        description: "You need to select your current mood before saving.",
+        variant: "destructive"
       });
       return;
     }
 
-    saveMoodMutation.mutate({
-      mood: selectedMood,
-      journal: journalText,
-    });
+    try {
+      const response = await saveMoodMutation.mutateAsync({
+        mood: selectedMood,
+        journal: journalText
+      });
+      
+      // Clear form and show success message
+      setSelectedMood(null);
+      setJournalText("");
+      toast({
+        title: "Mood Entry Saved",
+        description: "Your mood has been recorded successfully.",
+      });
+      
+      // Refresh user progress data
+      queryClient.invalidateQueries({ queryKey: ['/api/user/progress'] });
+      
+    } catch (error) {
+      console.error("Error saving mood entry:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem saving your mood entry. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Group entries by date
@@ -129,300 +184,283 @@ const MoodJournal = () => {
           </motion.div>
 
           <Card>
-            <CardHeader>
-              <Tabs defaultValue="new" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="new" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <CardHeader>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="new">New Entry</TabsTrigger>
                   <TabsTrigger value="history">Entry History</TabsTrigger>
                   <TabsTrigger value="analytics"><BarChartIcon className="h-4 w-4 mr-2" /> Analytics</TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </CardHeader>
-            
-            <TabsContent value="new" className="mt-0">
-              <CardContent className="p-6">
-                <div className="mb-8">
-                  <h2 className="text-xl font-medium mb-4">How are you feeling today?</h2>
-                  <div className="grid grid-cols-3 gap-4">
-                    {moodOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
-                          selectedMood === option.value
-                            ? `${option.color} border-current`
-                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                        }`}
-                        onClick={() => setSelectedMood(option.value)}
-                      >
-                        <option.icon size={36} className={selectedMood === option.value ? "" : "text-gray-500"} />
-                        <span className="mt-2 font-medium">{option.value}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h2 className="text-xl font-medium mb-4">Journal Entry (Optional)</h2>
-                  <Textarea
-                    placeholder="How has your day been? What's on your mind as you're learning to code?"
-                    className="min-h-[150px]"
-                    value={journalText}
-                    onChange={(e) => setJournalText(e.target.value)}
-                  />
-                </div>
-              </CardContent>
+              </CardHeader>
               
-              <CardFooter className="px-6 pb-6 pt-0">
-                <Button 
-                  className="w-full" 
-                  onClick={handleSubmit}
-                  disabled={saveMoodMutation.isPending}
-                >
-                  {saveMoodMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Save Mood Entry
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </TabsContent>
-            
-            <TabsContent value="history" className="mt-0">
-              <CardContent className="p-6">
-                <h2 className="text-xl font-medium mb-4">Your Mood History</h2>
-                
-                {isLoadingEntries ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : sortedDates.length > 0 ? (
-                  <div className="space-y-8">
-                    {sortedDates.map(date => (
-                      <div key={date} className="border-b pb-4 last:border-0">
-                        <div className="flex items-center mb-4">
-                          <Calendar className="mr-2 h-5 w-5 text-primary" />
-                          <h3 className="font-medium">{format(new Date(date), "EEEE, MMMM d, yyyy")}</h3>
-                        </div>
-                        
-                        <div className="space-y-4 pl-7">
-                          {entriesByDate[date].map(entry => {
-                            const moodOption = moodOptions.find(o => o.value === entry.mood);
-                            const MoodIcon = moodOption?.icon || Meh;
-                            
-                            return (
-                              <div key={entry.id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                                <div className="flex items-center mb-2">
-                                  <div className={`p-2 rounded-full mr-2 ${
-                                    moodOption ? moodOption.color : "bg-gray-100 dark:bg-gray-700"
-                                  }`}>
-                                    <MoodIcon className="h-4 w-4" />
-                                  </div>
-                                  <span className="font-medium">{entry.mood}</span>
-                                  <span className="text-xs text-muted-foreground ml-auto">
-                                    {format(new Date(entry.createdAt), "h:mm a")}
-                                  </span>
-                                </div>
-                                
-                                {entry.journal && (
-                                  <div className="mt-2 pl-8 text-sm text-gray-600 dark:text-gray-300">
-                                    {entry.journal}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">No mood entries yet</p>
-                    <Button variant="secondary" onClick={() => setActiveTab("new")}>
-                      Create Your First Entry
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </TabsContent>
-            
-            <TabsContent value="analytics" className="mt-0">
-              <CardContent className="p-6">
-                <h2 className="text-xl font-medium mb-4">Mood Analytics</h2>
-                
-                {isLoadingEntries ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : moodEntries && moodEntries.length > 0 ? (
-                  <div className="space-y-8">
-                    {/* Mood Distribution */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Mood Distribution</h3>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
-                        {/* Pie Chart of mood distribution */}
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={(() => {
-                                const distribution = moodEntries.reduce((acc: Record<string, number>, entry) => {
-                                  acc[entry.mood] = (acc[entry.mood] || 0) + 1;
-                                  return acc;
-                                }, {});
-                                
-                                return Object.keys(distribution).map(mood => ({
-                                  name: mood,
-                                  value: distribution[mood]
-                                }));
-                              })()}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
-                            >
-                              {moodOptions.map((option, index) => {
-                                const colors = {
-                                  "Good": "#4ade80", // green
-                                  "Okay": "#60a5fa", // blue
-                                  "Struggling": "#fb923c" // orange
-                                };
-                                // @ts-ignore - mood is a valid key
-                                const color = colors[option.value] || "#9ca3af";
-                                return <Cell key={`cell-${index}`} fill={color} />;
-                              })}
-                            </Pie>
-                            <Tooltip />
-                            <Legend />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    
-                    {/* Mood Trends Over Time */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Mood Trends (Last 7 Days)</h3>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
-                        {/* Bar Chart of mood over time */}
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={(() => {
-                              // Get last 7 days
-                              const endDate = new Date();
-                              const startDate = subDays(endDate, 6);
-                              
-                              // Generate array of all dates in the interval
-                              const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
-                              
-                              // Create data for chart
-                              return dateRange.map(date => {
-                                // Format date for comparison
-                                const dateStr = format(date, "yyyy-MM-dd");
-                                
-                                // Get mood entries for this date
-                                const dayEntries = entriesByDate[dateStr] || [];
-                                
-                                // Count moods
-                                const good = dayEntries.filter(e => e.mood === "Good").length;
-                                const okay = dayEntries.filter(e => e.mood === "Okay").length;
-                                const struggling = dayEntries.filter(e => e.mood === "Struggling").length;
-                                
-                                return {
-                                  date: format(date, "MM/dd"),
-                                  good,
-                                  okay,
-                                  struggling,
-                                  total: dayEntries.length
-                                };
-                              });
-                            })()}
-                            margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="good" fill="#4ade80" name="Good" />
-                            <Bar dataKey="okay" fill="#60a5fa" name="Okay" />
-                            <Bar dataKey="struggling" fill="#fb923c" name="Struggling" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    
-                    {/* Summary Stats */}
+              <TabsContent value="new" className="mt-0">
+                <CardContent className="p-6">
+                  <div className="mb-8">
+                    <h2 className="text-xl font-medium mb-4">How are you feeling today?</h2>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
-                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Entries</h4>
-                        <p className="text-3xl font-bold">{moodEntries.length}</p>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
-                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Most Common Mood</h4>
-                        <p className="text-3xl font-bold">
-                          {(() => {
-                            const moodCounts = moodEntries.reduce((acc: Record<string, number>, entry) => {
-                              acc[entry.mood] = (acc[entry.mood] || 0) + 1;
-                              return acc;
-                            }, {});
-                            
-                            let maxMood = "";
-                            let maxCount = 0;
-                            
-                            Object.entries(moodCounts).forEach(([mood, count]) => {
-                              if (count > maxCount) {
-                                maxMood = mood;
-                                maxCount = count;
-                              }
-                            });
-                            
-                            return maxMood;
-                          })()}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
-                        <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Streak</h4>
-                        <p className="text-3xl font-bold">
-                          {(() => {
-                            const today = format(new Date(), "yyyy-MM-dd");
-                            const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-                            
-                            // If no entry today, streak is 0
-                            if (!entriesByDate[today]) return 0;
-                            
-                            // Otherwise count consecutive days with entries
-                            let streak = 1;
-                            let currentDate = yesterday;
-                            
-                            while (entriesByDate[currentDate]) {
-                              streak++;
-                              currentDate = format(subDays(new Date(currentDate), 1), "yyyy-MM-dd");
-                            }
-                            
-                            return streak;
-                          })()}
-                        </p>
-                      </div>
+                      {moodOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
+                            selectedMood === option.value
+                              ? `${option.color} border-current`
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                          }`}
+                          onClick={() => setSelectedMood(option.value)}
+                        >
+                          <option.icon size={36} className={selectedMood === option.value ? "" : "text-gray-500"} />
+                          <span className="mt-2 font-medium">{option.value}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">No mood data to analyze yet</p>
-                    <Button variant="secondary" onClick={() => setActiveTab("new")}>
-                      Create Your First Entry
-                    </Button>
+
+                  <div className="mb-6">
+                    <h2 className="text-xl font-medium mb-4">Journal Entry (Optional)</h2>
+                    <Textarea
+                      placeholder="How has your day been? What's on your mind as you're learning to code?"
+                      className="min-h-[150px]"
+                      value={journalText}
+                      onChange={(e) => setJournalText(e.target.value)}
+                    />
                   </div>
-                )}
-              </CardContent>
-            </TabsContent>
+                </CardContent>
+                
+                <CardFooter className="px-6 pb-6 pt-0">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleSubmit}
+                    disabled={saveMoodMutation.isPending}
+                  >
+                    {saveMoodMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Save Mood Entry
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </TabsContent>
+              
+              <TabsContent value="history" className="mt-0">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-medium mb-4">Your Mood History</h2>
+                  
+                  {isLoadingEntries ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : sortedDates.length > 0 ? (
+                    <div className="space-y-8">
+                      {sortedDates.map(date => (
+                        <div key={date} className="border-b pb-4 last:border-0">
+                          <div className="flex items-center mb-4">
+                            <Calendar className="mr-2 h-5 w-5 text-primary" />
+                            <h3 className="font-medium">{format(new Date(date), "EEEE, MMMM d, yyyy")}</h3>
+                          </div>
+                          
+                          <div className="space-y-4 pl-7">
+                            {entriesByDate[date].map(entry => {
+                              const moodOption = moodOptions.find(o => o.value === entry.mood);
+                              const MoodIcon = moodOption?.icon || Meh;
+                              
+                              return (
+                                <div key={entry.id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                                  <div className="flex items-center mb-2">
+                                    <div className={`p-2 rounded-full mr-2 ${
+                                      moodOption ? moodOption.color : "bg-gray-100 dark:bg-gray-700"
+                                    }`}>
+                                      <MoodIcon className="h-4 w-4" />
+                                    </div>
+                                    <span className="font-medium">{entry.mood}</span>
+                                    <span className="text-xs text-muted-foreground ml-auto">
+                                      {format(new Date(entry.createdAt), "h:mm a")}
+                                    </span>
+                                  </div>
+                                  
+                                  {entry.journal && (
+                                    <div className="mt-2 pl-8 text-sm text-gray-600 dark:text-gray-300">
+                                      {entry.journal}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">No mood entries yet</p>
+                      <Button variant="secondary" onClick={() => setActiveTab("new")}>
+                        Create Your First Entry
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </TabsContent>
+              
+              <TabsContent value="analytics" className="mt-0">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-medium mb-4">Mood Analytics</h2>
+                  
+                  {isLoadingEntries ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : moodEntries && moodEntries.length > 0 ? (
+                    <div className="space-y-8">
+                      {/* Mood Distribution */}
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Mood Distribution</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
+                          {/* Pie Chart of mood distribution */}
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={(() => {
+                                  const distribution = moodEntries.reduce((acc: Record<string, number>, entry) => {
+                                    acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                                    return acc;
+                                  }, {});
+                                  
+                                  return Object.keys(distribution).map(mood => ({
+                                    name: mood,
+                                    value: distribution[mood]
+                                  }));
+                                })()}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {moodOptions.map((option, index) => {
+                                  const colors = {
+                                    "Good": "#4ade80", // green
+                                    "Okay": "#60a5fa", // blue
+                                    "Struggling": "#fb923c" // orange
+                                  };
+                                  // @ts-ignore - mood is a valid key
+                                  const color = colors[option.value] || "#9ca3af";
+                                  return <Cell key={`cell-${index}`} fill={color} />;
+                                })}
+                              </Pie>
+                              <Tooltip />
+                              <Legend />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      
+                      {/* Mood Trends Over Time */}
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Mood Trends (Last 7 Days)</h3>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg h-80">
+                          {/* Bar Chart of mood over time */}
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={(() => {
+                                // Get last 7 days
+                                const endDate = new Date();
+                                const startDate = subDays(endDate, 6);
+                                
+                                // Generate array of all dates in the interval
+                                const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+                                
+                                // Create data for chart
+                                return dateRange.map(date => {
+                                  // Format date for comparison
+                                  const dateStr = format(date, "yyyy-MM-dd");
+                                  
+                                  // Get mood entries for this date
+                                  const dayEntries = entriesByDate[dateStr] || [];
+                                  
+                                  // Count moods
+                                  const good = dayEntries.filter(e => e.mood === "Good").length;
+                                  const okay = dayEntries.filter(e => e.mood === "Okay").length;
+                                  const struggling = dayEntries.filter(e => e.mood === "Struggling").length;
+                                  
+                                  return {
+                                    date: format(date, "MM/dd"),
+                                    good,
+                                    okay,
+                                    struggling,
+                                    total: dayEntries.length
+                                  };
+                                });
+                              })()}
+                              margin={{ top: 10, right: 30, left: 0, bottom: 30 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Legend />
+                              <Bar dataKey="good" fill="#4ade80" name="Good" />
+                              <Bar dataKey="okay" fill="#60a5fa" name="Okay" />
+                              <Bar dataKey="struggling" fill="#fb923c" name="Struggling" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                          <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Entries</h4>
+                          <p className="text-3xl font-bold">{moodEntries.length}</p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                          <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Most Common Mood</h4>
+                          <p className="text-3xl font-bold">
+                            {(() => {
+                              const moodCounts = moodEntries.reduce((acc: Record<string, number>, entry) => {
+                                acc[entry.mood] = (acc[entry.mood] || 0) + 1;
+                                return acc;
+                              }, {});
+                              
+                              let maxMood = "";
+                              let maxCount = 0;
+                              
+                              Object.entries(moodCounts).forEach(([mood, count]) => {
+                                if (count > maxCount) {
+                                  maxMood = mood;
+                                  maxCount = count;
+                                }
+                              });
+                              
+                              return maxMood;
+                            })()}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-center">
+                          <h4 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Streak</h4>
+                          <p className="text-3xl font-bold">
+                            {userProgressData?.stats?.streak || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">No mood data to analyze yet</p>
+                      <Button variant="secondary" onClick={() => setActiveTab("new")}>
+                        Create Your First Entry
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </TabsContent>
+            </Tabs>
           </Card>
           
           <div className="mt-12 bg-white dark:bg-gray-800 p-6 rounded-standard shadow-soft">

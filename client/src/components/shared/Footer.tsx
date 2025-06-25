@@ -51,14 +51,14 @@ const Footer = () => {
                   <path fillRule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l8 4A1 1 0 0119 6v8a1 1 0 01-.504.868l-8 4a1 1 0 01-.992 0l-8-4A1 1 0 011 14V6a1 1 0 01.504-.868l8-4zM8 7a1 1 0 00-1 1v5a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h2 className="text-xl font-outfit font-semibold">MindEdu</h2>
+              <h2 className="text-xl font-outfit font-semibold">Neuro Edu</h2>
             </div>
             <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
               Supporting students' mental health while building programming skills.
             </p>
             <div className="flex space-x-4">
               {footerLinks.social.map((social, index) => (
-                <a 
+                <a
                   key={index}
                   href={social.href}
                   className="text-gray-400 hover:text-primary dark:hover:text-accent transition-colors"
@@ -71,7 +71,7 @@ const Footer = () => {
               ))}
             </div>
           </div>
-          
+
           <div>
             <h3 className="font-outfit font-semibold mb-4">Courses</h3>
             <ul className="space-y-2 text-sm">
@@ -86,7 +86,7 @@ const Footer = () => {
               ))}
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-outfit font-semibold mb-4">Resources</h3>
             <ul className="space-y-2 text-sm">
@@ -101,7 +101,7 @@ const Footer = () => {
               ))}
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-outfit font-semibold mb-4">Company</h3>
             <ul className="space-y-2 text-sm">
@@ -117,10 +117,10 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-            © {new Date().getFullYear()} MindEdu. All rights reserved.
+            © {new Date().getFullYear()} Neuro Edu. All rights reserved.
           </p>
           <div className="flex flex-wrap gap-4 text-sm">
             {footerLinks.legal.map((link, index) => (

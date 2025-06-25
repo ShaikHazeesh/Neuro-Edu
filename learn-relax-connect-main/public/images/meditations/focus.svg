@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="225" viewBox="0 0 400 225" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="225" fill="#E8F5FF"/>
+  <circle cx="200" cy="112.5" r="60" stroke="#0080FF" stroke-width="2" fill="none"/>
+  <circle cx="200" cy="112.5" r="45" stroke="#0080FF" stroke-width="3" fill="none"/>
+  <circle cx="200" cy="112.5" r="30" stroke="#0080FF" stroke-width="4" fill="none"/>
+  <circle cx="200" cy="112.5" r="15" stroke="#0080FF" stroke-width="5" fill="#0080FF">
+    <animate attributeName="r" values="15;12;15" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <text x="200" y="200" font-family="Arial" font-size="16" fill="#0080FF" text-anchor="middle">Study Focus</text>
+</svg> 

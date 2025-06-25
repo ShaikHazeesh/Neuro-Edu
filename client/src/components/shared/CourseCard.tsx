@@ -31,7 +31,7 @@ export default function CourseCard({
   progress = 0,
   featured = false,
 }: CourseCardProps) {
-  
+
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -41,9 +41,9 @@ export default function CourseCard({
         featured ? 'border-primary/50 shadow-md' : ''
       }`}>
         <div className="relative">
-          <img 
-            src={imageUrl} 
-            alt={title} 
+          <img
+            src={imageUrl}
+            alt={title}
             className="h-48 w-full object-cover"
           />
           {featured && (
@@ -79,10 +79,10 @@ export default function CourseCard({
             </div>
             <div className="flex items-center gap-1">
               <Award className="h-4 w-4 text-primary" />
-              <span className="text-primary">{progress}% complete</span>
+              <span className="text-primary">{Math.round(progress)}% complete</span>
             </div>
           </div>
-          <Progress value={progress} className="h-1.5 mb-4" />
+          <Progress value={Math.min(100, Math.max(0, progress))} className="h-1.5 mb-4" />
         </CardContent>
         <CardFooter>
           <Button asChild className="w-full gap-2">

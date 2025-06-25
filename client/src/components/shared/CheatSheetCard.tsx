@@ -4,7 +4,7 @@ interface CheatSheet {
   id: number;
   title: string;
   level: string;
-  topics: string[];
+  topics: string[] | string;
   downloadUrl: string;
   color: "primary" | "secondary" | "accent";
 }
@@ -15,7 +15,7 @@ interface CheatSheetCardProps {
 
 const CheatSheetCard = ({ cheatSheet }: CheatSheetCardProps) => {
   return (
-    <motion.div 
+    <motion.div
       className="bg-white dark:bg-gray-800 rounded-standard shadow-soft overflow-hidden"
       whileHover={{ y: -3, scale: 1.01, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
     >
@@ -29,7 +29,10 @@ const CheatSheetCard = ({ cheatSheet }: CheatSheetCardProps) => {
       </div>
       <div className="p-5">
         <ul className="space-y-3 text-sm">
-          {cheatSheet.topics.map((topic, index) => (
+          {(typeof cheatSheet.topics === 'string' ?
+            JSON.parse(cheatSheet.topics) :
+            cheatSheet.topics
+          ).map((topic, index) => (
             <li key={index} className="flex items-center">
               <span className={`material-icons text-${cheatSheet.color} text-sm mr-2`}>check_circle</span>
               {topic}
@@ -38,7 +41,7 @@ const CheatSheetCard = ({ cheatSheet }: CheatSheetCardProps) => {
         </ul>
       </div>
       <div className="p-5 bg-gray-50 dark:bg-gray-700/30">
-        <a 
+        <a
           href={cheatSheet.downloadUrl}
           className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-textColor dark:text-darkText py-2 rounded-standard font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-center"
           download

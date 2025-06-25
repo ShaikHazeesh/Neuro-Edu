@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face-API.js Model Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .log {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 20px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+  </style>
+</head>
+<body>
+  <h1>Face-API.js Model Test</h1>
+  <p>This page tests if the face-api.js models are being served correctly.</p>
+
+  <button id="testBtn">Test Models</button>
+  <div class="log" id="log"></div>
+
+  <script>
+    const logElement = document.getElementById('log');
+    const testBtn = document.getElementById('testBtn');
+
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = type;
+      entry.textContent = message;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    async function testModels() {
+      log('Starting model tests...', 'info');
+
+      const modelsPath = 'http://localhost:3001';
+      log(`Using models path: ${modelsPath}`, 'info');
+
+      try {
+        // Test TinyFaceDetector
+        log('Testing TinyFaceDetector model...', 'info');
+        await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
+        log('✓ TinyFaceDetector model loaded successfully!', 'success');
+
+        // Test SSD MobileNet
+        log('Testing SSD MobileNet model...', 'info');
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(modelsPath);
+        log('✓ SSD MobileNet model loaded successfully!', 'success');
+
+        // Test Face Landmark Model
+        log('Testing Face Landmark model...', 'info');
+        await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
+        log('✓ Face Landmark model loaded successfully!', 'success');
+
+        // Test Face Expression Model
+        log('Testing Face Expression model...', 'info');
+        await faceapi.nets.faceExpressionNet.loadFromUri(modelsPath);
+        log('✓ Face Expression model loaded successfully!', 'success');
+
+        log('All models loaded successfully!', 'success');
+      } catch (error) {
+        log(`Error loading models: ${error.message}`, 'error');
+        console.error('Error details:', error);
+      }
+    }
+
+    testBtn.addEventListener('click', testModels);
+  </script>
+</body>
+</html>

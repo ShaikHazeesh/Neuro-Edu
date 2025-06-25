@@ -76,17 +76,20 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/register", async (req, res, next) => {
+    console.log("REGISTER ENDPOINT CALLED", req.body);
     try {
       const { username, password, email, fullName } = req.body;
       
       // Validate required fields
       if (!username || !password || !email) {
+        console.log("REGISTER VALIDATION FAILED - missing fields");
         return res.status(400).json({ message: "Username, password, and email are required" });
       }
       
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
+        console.log("REGISTER FAILED - username already exists");
         return res.status(400).json({ message: "Username already taken" });
       }
       
@@ -98,25 +101,40 @@ export function setupAuth(app: Express) {
         email,
         fullName: fullName || null,
         avatarUrl: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         isAdmin: false
       });
       
+      console.log("USER CREATED SUCCESSFULLY", { id: user.id, username: user.username });
+      
       // Log the user in and send response
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.log("LOGIN AFTER REGISTER FAILED", err);
+          return next(err);
+        }
         
         // Return user info without password
         const { password, ...userWithoutPassword } = user;
+        console.log("REGISTER COMPLETED SUCCESSFULLY");
+        
+        // Set an explicit cookie header for session
+        res.cookie('connect.sid', req.sessionID, { 
+          httpOnly: true,
+          secure: false, // Set to true in production with HTTPS
+          maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
+        
         res.status(201).json(userWithoutPassword);
       });
     } catch (err) {
-      next(err);
+      console.error("REGISTER ERROR", err);
+      res.status(500).json({ message: "Registration failed due to a server error" });
     }
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
@@ -140,13 +158,26 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
+    try {
+      // User data is available only if authenticated
+      if (req.isAuthenticated()) {
+        // Return user info without sensitive data
+        const { password, ...userWithoutPassword } = req.user as Express.User;
+        res.json(userWithoutPassword);
+      } else {
+        // Return null if not authenticated
+        res.status(401).json({ 
+          message: "Not authenticated", 
+          isAuthenticated: false 
+        });
+      }
+    } catch (error) {
+      console.error("Error in /api/user endpoint:", error);
+      res.status(500).json({ 
+        message: "Internal server error", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
-    
-    // Return user info without password
-    const { password, ...userWithoutPassword } = req.user as SelectUser;
-    res.status(200).json(userWithoutPassword);
   });
   
   // User profile update

@@ -5,7 +5,7 @@ const CTASection = () => {
   return (
     <section className="py-16 px-4 bg-primary/10 dark:bg-primary/20 transition-colors duration-300">
       <div className="container mx-auto max-w-6xl">
-        <motion.div 
+        <motion.div
           className="rounded-standard bg-white dark:bg-gray-800 p-8 md:p-12 shadow-soft"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -14,22 +14,22 @@ const CTASection = () => {
         >
           <div className="flex flex-col md:flex-row items-center">
             <div className="md:w-2/3 mb-8 md:mb-0 md:pr-8">
-              <h2 className="text-2xl md:text-3xl font-outfit font-bold mb-4">Ready to start your journey?</h2>
+              <h2 className="text-2xl md:text-3xl font-outfit font-bold mb-4">Start your learning journey with wellbeing in mind</h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Join our community of learners who are building their programming skills while prioritizing mental wellness.
+                Join Neuro Edu today and experience a holistic approach to programming education that puts your mental wellbeing first.
               </p>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start">
                   <span className="material-icons text-primary mr-2 mt-0.5">check_circle</span>
-                  <span>Access to all courses and mental health resources</span>
+                  <span>Structured learning paths from beginner to advanced</span>
                 </li>
                 <li className="flex items-start">
                   <span className="material-icons text-primary mr-2 mt-0.5">check_circle</span>
-                  <span>Personalized AI support for learning and wellbeing</span>
+                  <span>Integrated mental wellness tools and resources</span>
                 </li>
                 <li className="flex items-start">
                   <span className="material-icons text-primary mr-2 mt-0.5">check_circle</span>
-                  <span>Join our supportive community of like-minded students</span>
+                  <span>Supportive community and personalized progress tracking</span>
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
@@ -43,17 +43,17 @@ const CTASection = () => {
             </div>
             <div className="md:w-1/3">
               <div className="relative">
-                <motion.div 
+                <motion.div
                   className="bg-accent/20 dark:bg-accent/30 w-60 h-60 rounded-full absolute -top-5 -right-5 -z-10"
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 ></motion.div>
-                <img 
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
-                  alt="Students learning" 
-                  className="rounded-standard shadow-md relative z-10" 
+                <img
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                  alt="Students learning"
+                  className="rounded-standard shadow-md relative z-10"
                 />
-                <motion.div 
+                <motion.div
                   className="absolute -bottom-4 -left-4 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-soft z-20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}

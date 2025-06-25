@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 
 const tools = [
   {
@@ -60,9 +61,12 @@ const MentalHealthTools = () => {
               </div>
               <h3 className="text-xl font-outfit font-semibold mb-2 text-center">{tool.title}</h3>
               <p className="text-gray-600 dark:text-gray-300 text-center mb-4">{tool.description}</p>
-              <Link href={tool.path} className={`w-full bg-${tool.color} hover:bg-opacity-90 ${tool.color === 'accent' ? 'text-darkBg' : 'text-white'} py-2 rounded-standard font-medium text-sm transition-colors block text-center`}>
+              <Button 
+                className={`w-full bg-${tool.color} hover:bg-opacity-90 ${tool.color === 'accent' ? 'text-darkBg' : 'text-white'} transition-colors`}
+                onClick={() => window.location.href = tool.path}
+              >
                 {tool.action}
-              </Link>
+              </Button>
             </motion.div>
           ))}
         </div>

@@ -11,16 +11,16 @@ import { Card } from "@/components/ui/card";
 const Community = () => {
   const [activeTab, setActiveTab] = useState("discussions");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  
+
   const { data: forumPosts, isLoading } = useQuery({
     queryKey: ['/api/forum'],
   });
-  
+
   // Scroll to top on component mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  
+
   const categories = [
     "All",
     "Mental Health",
@@ -31,7 +31,7 @@ const Community = () => {
     "Algorithms",
     "Career Advice"
   ];
-  
+
   return (
     <MainLayout>
       <div className="bg-gradient-to-b from-primary/10 to-background dark:from-primary/20 dark:to-darkBg py-12 px-4">
@@ -47,14 +47,14 @@ const Community = () => {
               Connect with peers who understand both the challenges of learning to code and managing mental health.
             </p>
           </motion.div>
-          
+
           <Tabs defaultValue="discussions" onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-3 max-w-md mx-auto mb-8">
               <TabsTrigger value="discussions">Discussions</TabsTrigger>
               <TabsTrigger value="support">Support</TabsTrigger>
               <TabsTrigger value="studyGroups">Study Groups</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="discussions">
               <div className="flex flex-wrap items-center justify-between mb-6">
                 <div className="overflow-x-auto hide-scrollbar w-full md:w-auto mb-4 md:mb-0">
@@ -77,20 +77,20 @@ const Community = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 <Button className="bg-primary hover:bg-opacity-90 text-white hidden md:flex">
                   <span className="material-icons mr-2 text-sm">add</span>
                   New Post
                 </Button>
               </div>
-              
+
               <div className="mb-6 md:hidden">
                 <Button className="w-full bg-primary hover:bg-opacity-90 text-white">
                   <span className="material-icons mr-2 text-sm">add</span>
                   New Post
                 </Button>
               </div>
-              
+
               <div className="space-y-4">
                 {isLoading ? (
                   // Loading skeletons
@@ -142,15 +142,21 @@ const Community = () => {
                             {post.content}
                           </p>
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {post.tags?.map((tag, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-accent text-xs"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                            {post.tags ? (
+                              // Parse JSON string to array if it's a string, otherwise use as is
+                              (typeof post.tags === 'string' ?
+                                JSON.parse(post.tags) :
+                                post.tags
+                              ).map((tag, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-accent text-xs"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))
+                            ) : null}
                           </div>
                           <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center">
@@ -190,7 +196,7 @@ const Community = () => {
                   )
                 )}
               </div>
-              
+
               {!isLoading && forumPosts && forumPosts.length > 0 && (
                 <div className="mt-8 flex justify-center">
                   <Button variant="outline" className="mr-2">
@@ -204,7 +210,7 @@ const Community = () => {
                 </div>
               )}
             </TabsContent>
-            
+
             <TabsContent value="support">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card className="p-6 rounded-standard">
@@ -221,7 +227,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-secondary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
@@ -236,7 +242,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mr-3">
@@ -251,7 +257,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-accent hover:bg-opacity-90 text-darkBg">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mr-3">
@@ -267,7 +273,7 @@ const Community = () => {
                   <Button className="w-full bg-red-500 hover:bg-red-600 text-white">Join Group</Button>
                 </Card>
               </div>
-              
+
               <div className="bg-white dark:bg-gray-800 p-6 rounded-standard shadow-soft mb-8">
                 <h3 className="font-outfit font-semibold text-xl mb-4">Weekly Support Sessions</h3>
                 <div className="space-y-4">
@@ -278,7 +284,7 @@ const Community = () => {
                     </div>
                     <Button variant="outline">Join</Button>
                   </div>
-                  
+
                   <div className="flex justify-between items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <div>
                       <h4 className="font-medium">Wellness Wednesday</h4>
@@ -286,7 +292,7 @@ const Community = () => {
                     </div>
                     <Button variant="outline">Join</Button>
                   </div>
-                  
+
                   <div className="flex justify-between items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <div>
                       <h4 className="font-medium">Feedback Friday</h4>
@@ -297,7 +303,7 @@ const Community = () => {
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="studyGroups">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="p-6 rounded-standard">
@@ -326,7 +332,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="mb-4">
                     <h3 className="font-outfit font-semibold text-lg mb-1">JavaScript Deep Dive</h3>
@@ -353,7 +359,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="mb-4">
                     <h3 className="font-outfit font-semibold text-lg mb-1">Web Development Basics</h3>
@@ -380,7 +386,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="mb-4">
                     <h3 className="font-outfit font-semibold text-lg mb-1">Algorithm Practice</h3>
@@ -407,7 +413,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard">
                   <div className="mb-4">
                     <h3 className="font-outfit font-semibold text-lg mb-1">React Study Circle</h3>
@@ -434,7 +440,7 @@ const Community = () => {
                   </div>
                   <Button className="w-full bg-primary hover:bg-opacity-90 text-white">Join Group</Button>
                 </Card>
-                
+
                 <Card className="p-6 rounded-standard border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center">
                   <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
                     <span className="material-icons text-gray-500 dark:text-gray-400">add</span>

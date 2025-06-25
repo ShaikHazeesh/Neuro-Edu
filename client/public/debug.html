@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Tools</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-box {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .info-box > div {
+            flex: 1;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 5px;
+            margin-right: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .info-box > div:last-child {
+            margin-right: 0;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button svg {
+            margin-right: 8px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            display: none;
+        }
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .note {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+        .loading {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Tools</h1>
+    <p>These tools are intended for debugging and development purposes only.</p>
+    
+    <section>
+        <h2>Streak Management</h2>
+        <div class="info-box">
+            <div>
+                <div class="info-label">Current Streak</div>
+                <div class="info-value" id="currentStreak">0</div>
+            </div>
+            <div>
+                <div class="info-label">Last Update</div>
+                <div class="info-value" id="lastUpdate">-</div>
+            </div>
+        </div>
+        
+        <div>
+            <button onclick="loadStreakInfo()" id="loadStreakBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Load Streak Info
+            </button>
+            <button onclick="resetStreak()" id="resetStreakBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Reset Streak
+            </button>
+            <button onclick="incrementStreak()" id="incrementStreakBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Increment Streak
+            </button>
+            <button onclick="showStreakPopup()" id="showStreakBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Show Streak Popup
+            </button>
+        </div>
+        
+        <div class="result-box" id="streakResult"></div>
+    </section>
+
+    <script>
+        // Reset streak
+        async function resetStreak() {
+            const button = document.getElementById('resetStreakBtn');
+            const result = document.getElementById('streakResult');
+            
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> Resetting...';
+            result.style.display = 'block';
+            result.innerHTML = '<p>Resetting streak...</p>';
+            
+            try {
+                // Reset streak in local storage
+                localStorage.setItem('userStreak', '0');
+                localStorage.setItem('lastStreakUpdate', new Date().toISOString());
+                
+                // Update UI
+                document.getElementById('currentStreak').textContent = '0';
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString();
+                
+                result.innerHTML = `
+                    <div class="success">Streak reset successfully</div>
+                    <p>Your streak has been reset to 0. This will take effect immediately.</p>
+                `;
+                
+                // Try to dispatch streak updated event
+                try {
+                    const streakEvent = new CustomEvent('streakUpdated', { detail: { streak: 0 } });
+                    window.dispatchEvent(streakEvent);
+                } catch (e) {
+                    console.error('Error dispatching streak event:', e);
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                    <p>Could not reset streak.</p>
+                `;
+            } finally {
+                // Reset button state
+                button.disabled = false;
+                button.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Reset Streak
+                `;
+            }
+        }
+        
+        // Increment streak
+        async function incrementStreak() {
+            const button = document.getElementById('incrementStreakBtn');
+            const result = document.getElementById('streakResult');
+            
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> Updating...';
+            result.style.display = 'block';
+            result.innerHTML = '<p>Incrementing streak and recalculating progress...</p>';
+            
+            try {
+                // Call the server endpoint to update streak
+                const response = await fetch('/api/debug/update-streak', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        increment: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        result.innerHTML = `
+                            <div class="error">You must be logged in to use this tool.</div>
+                            <p>Please <a href="/auth">log in</a> and try again.</p>
+                        `;
+                        return;
+                    }
+                    
+                    const errorText = await response.text();
+                    throw new Error(`${response.status} ${response.statusText}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update UI
+                document.getElementById('currentStreak').textContent = data.streak;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString();
+                
+                // Update localStorage to match
+                localStorage.setItem('userStreak', data.streak.toString());
+                localStorage.setItem('lastStreakUpdate', new Date().toISOString());
+                
+                result.innerHTML = `
+                    <div class="success">${data.message}</div>
+                    <p>Your streak has been updated to ${data.streak} and all progress has been recalculated.</p>
+                    <p>Please refresh your dashboard to see the changes.</p>
+                `;
+                
+                // Try to dispatch streak updated event
+                try {
+                    const streakEvent = new CustomEvent('streakUpdated', { detail: { streak: data.streak } });
+                    window.dispatchEvent(streakEvent);
+                    
+                    // Also try to trigger the streak popup
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('forceShowStreakPopup'));
+                    }, 1000);
+                } catch (e) {
+                    console.error('Error dispatching streak event:', e);
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                    <p>Could not update streak. Please try again later.</p>
+                `;
+            } finally {
+                // Reset button state
+                button.disabled = false;
+                button.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Increment Streak
+                `;
+            }
+        }
+        
+        // Load streak info
+        async function loadStreakInfo() {
+            const result = document.getElementById('streakResult');
+            result.style.display = 'block';
+            result.innerHTML = '<p>Loading streak information...</p>';
+            
+            try {
+                // Get streak from localStorage
+                const streak = localStorage.getItem('userStreak') || '0';
+                const lastUpdate = localStorage.getItem('lastStreakUpdate') || new Date().toISOString();
+                
+                // Update UI
+                document.getElementById('currentStreak').textContent = streak;
+                document.getElementById('lastUpdate').textContent = new Date(lastUpdate).toLocaleDateString();
+                
+                // Try to get user details if logged in
+                try {
+                    const response = await fetch('/api/user/profile');
+                    if (response.ok) {
+                        const userData = await response.json();
+                        
+                        // Only update if different
+                        if (userData.streak !== parseInt(streak)) {
+                            document.getElementById('currentStreak').textContent = userData.streak;
+                            document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString();
+                            localStorage.setItem('userStreak', userData.streak.toString());
+                            localStorage.setItem('lastStreakUpdate', new Date().toISOString());
+                        }
+                        
+                        // Display additional info
+                        result.innerHTML = `
+                            <div class="info">Streak Information</div>
+                            <p><strong>User ID:</strong> ${userData.id}</p>
+                            <p><strong>Username:</strong> ${userData.username}</p>
+                            <p><strong>Server Streak:</strong> ${userData.streak}</p>
+                            <p><strong>Local Streak:</strong> ${streak}</p>
+                            <p><strong>Last Update:</strong> ${new Date(lastUpdate).toLocaleString()}</p>
+                        `;
+                    } else {
+                        throw new Error('Not logged in or couldn\'t fetch user data');
+                    }
+                } catch (e) {
+                    // Just show local streak info
+                    result.innerHTML = `
+                        <div class="info">Local Streak Information</div>
+                        <p><strong>Local Streak:</strong> ${streak}</p>
+                        <p><strong>Last Update:</strong> ${new Date(lastUpdate).toLocaleString()}</p>
+                        <p class="note">Note: You are not logged in, so this is only your local data.</p>
+                        <p class="note">Log in to see and update your server streak.</p>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                    <p>Could not load streak information.</p>
+                `;
+            }
+        }
+        
+        // Show streak popup
+        function showStreakPopup() {
+            const result = document.getElementById('streakResult');
+            result.style.display = 'block';
+            
+            // Get current streak
+            const streak = parseInt(document.getElementById('currentStreak').textContent) || 0;
+            
+            // Try to trigger the streak popup by dispatching the event
+            try {
+                const streakEvent = new CustomEvent('streakUpdated', { detail: { streak } });
+                window.dispatchEvent(streakEvent);
+                
+                // Also try the force event
+                window.dispatchEvent(new CustomEvent('forceShowStreakPopup'));
+                
+                result.innerHTML = `
+                    <div class="info">Triggered Streak Popup</div>
+                    <p>Attempted to show the streak popup for streak: ${streak}</p>
+                    <p class="note">If the popup doesn't appear, it might not be available on this page.</p>
+                `;
+            } catch (e) {
+                result.innerHTML = `
+                    <div class="error">Error: ${e.message}</div>
+                    <p>Could not trigger streak popup.</p>
+                `;
+            }
+        } 
+    </script>
+</body>
+</html> 

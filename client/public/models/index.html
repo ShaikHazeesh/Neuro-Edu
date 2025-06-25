@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face API Models</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #f5f5f5;
+      font-family: monospace;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Face API Models Loader</h1>
+  <p>This page will load the face-api.js models from CDN and cache them in your browser.</p>
+  
+  <div>
+    <button id="load-models">Load Models</button>
+    <button id="check-models">Check Models</button>
+    <button id="clear-cache">Clear Cache</button>
+  </div>
+  
+  <div class="status" id="status"></div>
+  
+  <script>
+    const statusDiv = document.getElementById('status');
+    const loadBtn = document.getElementById('load-models');
+    const checkBtn = document.getElementById('check-models');
+    const clearBtn = document.getElementById('clear-cache');
+    
+    function log(message) {
+      const now = new Date().toLocaleTimeString();
+      statusDiv.innerHTML += `[${now}] ${message}<br>`;
+      statusDiv.scrollTop = statusDiv.scrollHeight;
+    }
+    
+    // Load models from CDN
+    async function loadModels() {
+      log('Loading models from CDN...');
+      
+      try {
+        // Load models from CDN
+        const modelUrl = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        log(`Using model URL: ${modelUrl}`);
+        
+        // Load TinyFaceDetector model
+        log('Loading TinyFaceDetector model...');
+        await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
+        log('✅ TinyFaceDetector model loaded');
+        
+        // Load FaceLandmark68 model
+        log('Loading FaceLandmark68 model...');
+        await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
+        log('✅ FaceLandmark68 model loaded');
+        
+        // Load FaceExpression model
+        log('Loading FaceExpression model...');
+        await faceapi.nets.faceExpressionNet.loadFromUri(modelUrl);
+        log('✅ FaceExpression model loaded');
+        
+        // Load SSD MobileNet model
+        log('Loading SSD MobileNet model...');
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(modelUrl);
+        log('✅ SSD MobileNet model loaded');
+        
+        log('All models loaded successfully! They are now cached in your browser.');
+      } catch (error) {
+        log(`❌ Error loading models: ${error.message}`);
+        console.error('Error loading models:', error);
+      }
+    }
+    
+    // Check if models are loaded
+    function checkModels() {
+      log('Checking if models are loaded...');
+      
+      const tinyFaceDetectorLoaded = faceapi.nets.tinyFaceDetector.isLoaded;
+      log(`TinyFaceDetector: ${tinyFaceDetectorLoaded ? '✅ Loaded' : '❌ Not loaded'}`);
+      
+      const faceLandmarkLoaded = faceapi.nets.faceLandmark68Net.isLoaded;
+      log(`FaceLandmark68: ${faceLandmarkLoaded ? '✅ Loaded' : '❌ Not loaded'}`);
+      
+      const faceExpressionLoaded = faceapi.nets.faceExpressionNet.isLoaded;
+      log(`FaceExpression: ${faceExpressionLoaded ? '✅ Loaded' : '❌ Not loaded'}`);
+      
+      const ssdMobilenetLoaded = faceapi.nets.ssdMobilenetv1.isLoaded;
+      log(`SSD MobileNet: ${ssdMobilenetLoaded ? '✅ Loaded' : '❌ Not loaded'}`);
+      
+      const allLoaded = tinyFaceDetectorLoaded && faceLandmarkLoaded && faceExpressionLoaded && ssdMobilenetLoaded;
+      log(`Overall status: ${allLoaded ? '✅ All models loaded' : '❌ Some models not loaded'}`);
+    }
+    
+    // Clear browser cache
+    function clearCache() {
+      log('Attempting to clear cache...');
+      
+      try {
+        // Clear IndexedDB
+        indexedDB.deleteDatabase('face-api');
+        
+        // Clear localStorage
+        localStorage.clear();
+        
+        // Clear sessionStorage
+        sessionStorage.clear();
+        
+        // Clear application cache
+        if (window.applicationCache) {
+          window.applicationCache.abort();
+        }
+        
+        // Clear service workers
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        
+        // Reset model loaded status
+        faceapi.nets.tinyFaceDetector.isLoaded = false;
+        faceapi.nets.faceLandmark68Net.isLoaded = false;
+        faceapi.nets.faceExpressionNet.isLoaded = false;
+        faceapi.nets.ssdMobilenetv1.isLoaded = false;
+        
+        log('✅ Cache cleared. Please reload the page and try loading the models again.');
+      } catch (error) {
+        log(`❌ Error clearing cache: ${error.message}`);
+        console.error('Error clearing cache:', error);
+      }
+    }
+    
+    // Event listeners
+    loadBtn.addEventListener('click', loadModels);
+    checkBtn.addEventListener('click', checkModels);
+    clearBtn.addEventListener('click', clearCache);
+    
+    // Initial log
+    log('Page loaded. Click "Load Models" to load the face detection models.');
+    log('After loading, you can click "Check Models" to verify they are loaded.');
+    log('If you encounter issues, click "Clear Cache" and try again.');
+  </script>
+</body>
+</html>

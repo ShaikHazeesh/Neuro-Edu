@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Reset Tool</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeeba;
+        }
+        button {
+            background-color: #4F46E5;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #4338CA;
+        }
+        button:disabled {
+            background-color: #9CA3AF;
+            cursor: not-allowed;
+        }
+        #result {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        .success {
+            color: #0f5132;
+            background-color: #d1e7dd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .error {
+            color: #842029;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .result-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .updated {
+            color: #0f5132;
+        }
+        .created {
+            color: #084298;
+        }
+        .skipped {
+            color: #856404;
+        }
+        .error {
+            color: #842029;
+        }
+    </style>
+</head>
+<body>
+    <h1>Progress Recalculation Tool</h1>
+    <p>This tool helps fix progress tracking issues by recalculating progress for all courses.</p>
+
+    <div class="warning">
+        <strong>Note:</strong> You must be logged in to use this tool. This operation may take a few moments to complete.
+    </div>
+    
+    <button id="recalculateBtn" onclick="recalculateAllProgress()">Recalculate All Progress</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function recalculateAllProgress() {
+            const resultDiv = document.getElementById('result');
+            const button = document.getElementById('recalculateBtn');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<p>Recalculating progress for all courses...</p>`;
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/debug/recalculate-progress');
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        resultDiv.innerHTML = `
+                            <div class="error">You must be logged in to use this tool.</div>
+                            <p>Please <a href="/auth">log in</a> and try again.</p>
+                        `;
+                        button.disabled = false;
+                        return;
+                    }
+                    
+                    const errorText = await response.text();
+                    throw new Error(`${response.status} ${response.statusText}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+
+                let resultsHtml = '<div class="result-list"><ul>';
+                
+                    data.results.forEach(result => {
+                        if (result.status === 'updated') {
+                        resultsHtml += `<li class="updated">${result.courseTitle}: ${result.oldProgress}% → ${result.newProgress}% (Lessons: ${result.completedLessons}, Quizzes: ${result.quizzesPassed})</li>`;
+                    } else if (result.status === 'created') {
+                        resultsHtml += `<li class="created">${result.courseTitle}: New entry created with ${result.newProgress}% (Lessons: ${result.completedLessons}, Quizzes: ${result.quizzesPassed})</li>`;
+                    } else if (result.status === 'skipped') {
+                        resultsHtml += `<li class="skipped">${result.courseTitle}: ${result.message}</li>`;
+                        } else {
+                        resultsHtml += `<li class="error">${result.courseTitle}: ${result.status} - ${result.message}</li>`;
+                        }
+                    });
+                
+                resultsHtml += '</ul></div>';
+
+                    resultDiv.innerHTML = `
+                    <div class="success">${data.message}</div>
+                    <p>Progress has been recalculated. Here are the results:</p>
+                    ${resultsHtml}
+                    <p class="mt-4">Please refresh your dashboard to see the changes.</p>
+                        <p><a href="/dashboard">Go to Dashboard</a></p>
+                    `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">Error: ${error.message}</div>
+                    <p>Please try again later or contact support if the problem persists.</p>
+                `;
+            } finally {
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

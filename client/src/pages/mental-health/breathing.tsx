@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlayCircle, PauseCircle, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { useActivityTracker } from '@/hooks/use-activity-tracker';
 
 const breathingSteps = [
   {
@@ -163,6 +164,9 @@ const BreathingExercise = () => {
   const toggleSound = () => {
     setSoundEnabled(!soundEnabled);
   };
+
+  // Track mental health activity
+  useActivityTracker({ activityType: 'mental' });
 
   return (
     <MainLayout>

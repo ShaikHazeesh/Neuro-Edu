@@ -47,10 +47,26 @@ function useAIChat() {
       });
       
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        const errorStatus = response.status;
+        let errorMessage = `Error: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (jsonError) {
+          console.error('Error parsing error response:', jsonError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        throw new Error('Failed to parse the AI response');
+      }
       
       // Add AI response to the chat
       const botMessage: ChatMessage = {
